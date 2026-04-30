@@ -13,6 +13,7 @@ CREATE TABLE Users (
     Role NVARCHAR(20) CHECK (Role IN ('Candidate','Company')),
     CreatedAt DATETIME DEFAULT GETDATE()
 );
+select * from Users
 
 select * from Candidates
 
