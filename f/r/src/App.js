@@ -3,6 +3,7 @@ import './App.css';
 import RoleSelection from './comps/RoleSelection';
 import Login from './comps/Login';
 import Signup from './comps/Signup';
+import EmployerDashboard from './comps/employer/EmployerDashboard';
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,39 +31,44 @@ function App() {
   };
 
   if (currentUser) {
-    return (
+    if (currentUser.role === 'Company') {
+      return (
+        <EmployerDashboard 
+          user={currentUser} 
+          onLogout={handleLogout} 
+        />
+      );
+    }
+    
+    // Candidate dashboard (coming soon)
+     return (
       <div className="App">
         <div className="dashboard-container">
-          <button onClick={handleLogout} className="logout-btn">
-            Logout
-          </button>
-          <h1>Welcome, {currentUser.name}!</h1>
-          <h2>{currentUser.role === 'Company' ? 'Employer Dashboard' : 'Candidate Dashboard'}</h2>
-          <p>Coming Soon - Full dashboard features</p>
+          <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <h1>Welcome, {currentUser.name || 'User'}!</h1>
+          <h2>Candidate Dashboard</h2>
+          <p>Your role: {currentUser.role}</p>
+          <p>Coming Soon - We're building something awesome!</p>
         </div>
       </div>
     );
   }
-
-  return (
+   return (
     <div className="App">
       {currentView === 'role' && (
-        <RoleSelection onSelectRole={() => setCurrentView('login')} />
+        <RoleSelection onSelectRole={(role) => {
+          setCurrentView('login');
+          // Store selected role if needed
+        }} />
       )}
       {currentView === 'login' && (
-        <Login 
-          onSwitchToSignup={() => setCurrentView('signup')}
-          onLoginSuccess={handleLoginSuccess}
-        />
+        <Login onLoginSuccess={handleLoginSuccess} />
       )}
       {currentView === 'signup' && (
-        <Signup 
-          onSwitchToLogin={() => setCurrentView('login')}
-          onSignupSuccess={handleLoginSuccess}
-        />
+        <Signup onSignupSuccess={handleLoginSuccess} />
       )}
     </div>
   );
-}
+};
 
 export default App;

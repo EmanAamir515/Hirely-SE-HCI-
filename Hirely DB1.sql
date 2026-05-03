@@ -4,6 +4,28 @@ GO
 USE HirelyDB;
 GO
 
+select * from users
+select * from Companies
+select * from Candidates
+select * from Applications
+select * from Jobs
+select * from Services
+select * from Products
+
+select * from Skills
+select * from CandidateSkills
+select * from JobSkills
+
+select * from ServiceRequests
+select * from Notifications
+
+select * from Interviews
+select * from HirelyScreenings
+select * from ApplicationStatusHistory
+select * from AwarenessQuestions
+select * from CandidateQuestionResponses
+
+
 CREATE TABLE Users (
     UserID INT PRIMARY KEY IDENTITY(1,1),
     Name NVARCHAR(100) NOT NULL,
@@ -13,9 +35,7 @@ CREATE TABLE Users (
     Role NVARCHAR(20) CHECK (Role IN ('Candidate','Company')),
     CreatedAt DATETIME DEFAULT GETDATE()
 );
-select * from Users
 
-select * from Candidates
 
 CREATE TABLE Candidates (
     CandidateID INT PRIMARY KEY,
@@ -218,3 +238,47 @@ CREATE TABLE CandidateQuestionResponses (
     FOREIGN KEY (CandidateID) REFERENCES Candidates(CandidateID) ON DELETE NO ACTION,
     FOREIGN KEY (QuestionID)  REFERENCES AwarenessQuestions(QuestionID) ON DELETE CASCADE
 );
+
+
+
+
+INSERT INTO Jobs (CompanyID, Title, Description, ExperienceLevel, Location, JobType, WorkMode, Deadline, RequiredSkills, SalaryRange) VALUES
+(2, 'UI/UX Designer', 'Looking for a creative designer for web and mobile apps.', 'Entry Level', 'Karachi', 'Job', 'Onsite', '2026-05-15', 'Figma, Adobe XD, Sketch, CSS', '$40,000 - $55,000'),
+(2, 'Backend Developer Intern', 'Great opportunity for fresh graduates to learn Node.js development.', 'Entry Level', 'Islamabad', 'Internship', 'Remote', '2026-07-01', 'Node.js, SQL, JavaScript', 'Paid Internship');
+
+-- 5. Insert Applications
+INSERT INTO Applications (CandidateID, JobID, CoverNote, Status) VALUES
+(1, 1, 'I have 3 years of React experience', 'Pending'),
+(1, 2, 'Passionate about user-centered design', 'Shortlisted');
+
+
+-- 6. Insert Services
+INSERT INTO Services (CompanyID, Title, Description, Category, Price) VALUES
+(2, 'Logo Design', 'Professional logo design package', 'Design', 500.00),
+(2, 'SEO Optimization', 'Complete SEO audit and optimization', 'Marketing', 1200.00);
+
+-- 7. Insert Products
+INSERT INTO Products (CompanyID, ProductName, Description, Price, StockQuantity) VALUES
+(2, 'UI Kit Pro', 'Complete UI component library', 149.99, 100),
+(2, 'Startup Launch Guide', 'Complete guide to launching your startup', 29.99, 200);
+
+-- 8. Insert Skills
+INSERT INTO Skills (SkillName) VALUES
+('React'), ('TypeScript'), ('JavaScript'), ('Node.js'), ('SQL'),
+('CSS'), ('Tailwind'), ('Figma'), ('Adobe XD'), ('Python');
+
+-- 9. Insert Candidate Skills
+INSERT INTO CandidateSkills (CandidateID, SkillID) VALUES
+(1, 1), (1, 3), (1, 4), (1, 5);
+
+-- 10. Insert Job Skills
+INSERT INTO JobSkills (JobID, SkillID) VALUES
+(1, 1), (1, 2), (1, 6), (1, 7),
+(2, 6), (2, 8), (2, 9);
+
+-- 11. Insert Notifications
+INSERT INTO Notifications (UserID, Message, Type) VALUES
+(1, 'New application received for Frontend Developer', 'application'),
+(2, 'Sarah Designer applied for UI/UX Designer', 'application');
+
+
