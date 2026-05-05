@@ -99,41 +99,19 @@ const AllApplicants = ({ user, onViewJobApplicants }) => {
 
       {/* Stats */}
       <div className="stats-row">
-        <div className="stat-card">
-          <span>👥</span>
-          <div>
-            <span className="stat-value">{applicants.length}</span>
-            <span className="stat-label">Total Applicants</span>
+        {[
+          { val: applicants.length,                                      lbl: 'Total Applicants', bg: '#EEF2FF', color: '#667eea' },
+          { val: applicants.filter(a => a.Status === 'Pending').length,  lbl: 'Pending',          bg: '#FEF3C7', color: '#92400E' },
+          { val: applicants.filter(a => a.Status === 'Shortlisted').length, lbl: 'Shortlisted',   bg: '#DBEAFE', color: '#1E40AF' },
+          { val: applicants.filter(a => a.Status === 'Accepted').length, lbl: 'Accepted',         bg: '#D1FAE5', color: '#065F46' },
+        ].map(s => (
+          <div key={s.lbl} className="stat-card">
+            <div className="stat-num-box" style={{ background: s.bg, color: s.color }}>{s.val}</div>
+            <span className="stat-label">{s.lbl}</span>
           </div>
-        </div>
-        <div className="stat-card">
-          <span>⏳</span>
-          <div>
-            <span className="stat-value">
-              {applicants.filter(a => a.Status === 'Pending').length}
-            </span>
-            <span className="stat-label">Pending</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span>⭐</span>
-          <div>
-            <span className="stat-value">
-              {applicants.filter(a => a.Status === 'Shortlisted').length}
-            </span>
-            <span className="stat-label">Shortlisted</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span>✅</span>
-          <div>
-            <span className="stat-value">
-              {applicants.filter(a => a.Status === 'Accepted').length}
-            </span>
-            <span className="stat-label">Accepted</span>
-          </div>
-        </div>
+        ))}
       </div>
+     
 
       {/* Search and Filter */}
       <div className="controls">
@@ -157,9 +135,9 @@ const AllApplicants = ({ user, onViewJobApplicants }) => {
         >
           <option value="All">All Status</option>
           <option value="Pending">⏳ Pending</option>
-          <option value="Shortlisted">⭐ Shortlisted</option>
-          <option value="Interview">📅 Interview</option>
-          <option value="Accepted">✅ Accepted</option>
+          <option value="Shortlisted"> Shortlisted</option>
+          <option value="Interview"> Interview</option>
+          <option value="Accepted"> Accepted</option>
           <option value="Rejected">❌ Rejected</option>
         </select>
       </div>
@@ -222,9 +200,9 @@ const AllApplicants = ({ user, onViewJobApplicants }) => {
                         }}
                       >
                         <option value="Pending">⏳ Pending</option>
-                        <option value="Shortlisted">⭐ Shortlisted</option>
-                        <option value="Interview">📅 Interview</option>
-                        <option value="Accepted">✅ Accepted</option>
+                        <option value="Shortlisted"> Shortlisted</option>
+                        <option value="Interview"> Interview</option>
+                        <option value="Accepted"> Accepted</option>
                         <option value="Rejected">❌ Rejected</option>
                       </select>
                     </td>
@@ -360,7 +338,7 @@ const AllApplicants = ({ user, onViewJobApplicants }) => {
           width: 38px;
           height: 38px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #667eea);
           color: white;
           font-weight: 700;
           font-size: 15px;

@@ -90,14 +90,14 @@ const ManageServices = ({ user }) => {
       {/* Stats */}
       <div className="service-stats">
         <div className="stat-card">
-          <span className="stat-icon">📋</span>
+          <span className="stat-icon"></span>
           <div>
             <span className="stat-value">{services.length}</span>
             <span className="stat-label">Total Services</span>
           </div>
         </div>
         <div className="stat-card">
-          <span className="stat-icon">📂</span>
+          <span className="stat-icon"></span>
           <div>
             <span className="stat-value">{categories.length - 1}</span>
             <span className="stat-label">Categories</span>
@@ -173,7 +173,6 @@ const ManageServices = ({ user }) => {
               <tr>
                 <td colSpan="4" className="empty-table">
                   <div className="empty-state">
-                    <span>📋</span>
                     <p>No services found</p>
                   </div>
                 </td>
@@ -219,7 +218,7 @@ const ManageServices = ({ user }) => {
         .subtitle { color: #6B7280; margin: 0; font-size: 15px; }
         
         .add-btn {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #667eea );
           color: white; border: none; padding: 12px 24px;
           border-radius: 10px; cursor: pointer; font-size: 14px;
           font-weight: 500; transition: all 0.3s;
@@ -239,10 +238,10 @@ const ManageServices = ({ user }) => {
 
         .stat-card {
           flex: 1;
-          background: white;
+          background: linear-gradient(135deg, #6777be );
           padding: 20px;
           border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+          box-shadow: 0 1px 3px rgba(192, 121, 121, 0.06);
           display: flex;
           align-items: center;
           gap: 16px;
@@ -261,7 +260,7 @@ const ManageServices = ({ user }) => {
 
         .stat-label {
           font-size: 13px;
-          color: #6B7280;
+          color: #3963b8;
         }
 
         /* Controls */

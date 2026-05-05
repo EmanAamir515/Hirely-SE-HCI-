@@ -152,7 +152,7 @@ const PostJob = ({ user, onJobPosted }) => {
         </div>
         
         <button type="submit" className="submit-btn" disabled={loading}>
-          {loading ? 'Posting...' : '📢 Post Job'}
+          {loading ? 'Posting...' : 'POST JOB!!!'}
         </button>
       </form>
 
@@ -197,7 +197,7 @@ const PostJob = ({ user, onJobPosted }) => {
         }
         
         .submit-btn {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #667eea);
           color: white; border: none;
           padding: 14px 40px; border-radius: 8px;
           font-size: 16px; cursor: pointer;

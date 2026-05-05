@@ -249,7 +249,7 @@ const EmployerProfile = ({ user, companyData, onUpdate, onLogoChange }) => {
 
         .btn-upload {
           padding: 9px 18px;
-          background: linear-gradient(135deg,#667eea,#764ba2);
+          background: linear-gradient(135deg,#667eea);
           color: white; border-radius: 8px; cursor: pointer;
           font-size: 13px; font-weight: 500; white-space: nowrap;
           transition: opacity .2s; user-select: none;
@@ -290,7 +290,7 @@ const EmployerProfile = ({ user, companyData, onUpdate, onLogoChange }) => {
 
         .btn-save {
           width: 100%; padding: 13px;
-          background: linear-gradient(135deg,#667eea,#764ba2);
+          background: linear-gradient(135deg,#667eea);
           color: white; border: none; border-radius: 9px;
           font-size: 15px; font-weight: 600; cursor: pointer;
           transition: opacity .2s;

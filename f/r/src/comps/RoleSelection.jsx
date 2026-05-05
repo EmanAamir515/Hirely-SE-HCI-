@@ -1,12 +1,11 @@
 import React from 'react';
 
 const RoleSelection = ({ onSelectRole }) => {
-  const [selectedRole, setSelectedRole] = React.useState(null);
-
   const handleRoleSelect = (role) => {
-    setSelectedRole(role);
+    // Store the exact role value that matches DB constraint
     sessionStorage.setItem('selectedRole', role);
-    onSelectRole();
+    // Call the parent handler
+    onSelectRole(role);
   };
 
   return (
@@ -22,14 +21,14 @@ const RoleSelection = ({ onSelectRole }) => {
             <div className="role-icon">🏢</div>
             <h3>Employer</h3>
             <p>Post jobs, manage applicants, and showcase your services</p>
-            <button>Enter Dashboard</button>
+            <button>GIVER</button>
           </div>
 
           <div className="role-option" onClick={() => handleRoleSelect('Candidate')}>
             <div className="role-icon">👨‍💻</div>
             <h3>Candidate</h3>
             <p>Find jobs, track applications, and discover opportunities</p>
-            <button>Enter Dashboard</button>
+            <button>FINDER</button>
           </div>
         </div>
       </div>
@@ -51,7 +50,7 @@ const RoleSelection = ({ onSelectRole }) => {
           box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         .logo-section {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #667eea );
           padding: 40px;
           text-align: center;
           color: white;
@@ -80,7 +79,7 @@ const RoleSelection = ({ onSelectRole }) => {
           box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         .role-option:hover:first-child {
-          border-color: #667eea;
+          border-color: #764ba2;
         }
         .role-option:hover:last-child {
           border-color: #764ba2;
@@ -100,7 +99,7 @@ const RoleSelection = ({ onSelectRole }) => {
         }
         .role-option button {
           padding: 12px 30px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #667eea );
           color: white;
           border: none;
           border-radius: 8px;

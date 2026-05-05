@@ -253,7 +253,7 @@ const ViewApplicants = ({ user, jobId, onBack }) => {
 
         .avatar {
           width: 46px; height: 46px;
-          background: linear-gradient(135deg, #667EEA, #764BA2);
+          background: linear-gradient(135deg, #667EEA);
           border-radius: 12px;
           display: flex; align-items: center; justify-content: center;
           color: white; font-size: 17px; font-weight: 700; flex-shrink: 0;

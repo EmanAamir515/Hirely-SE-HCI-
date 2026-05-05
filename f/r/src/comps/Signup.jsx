@@ -12,7 +12,32 @@ const Signup = ({ onSwitchToLogin, onSignupSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const selectedRole = sessionStorage.getItem('selectedRole') || 'Candidate';
+  const selectedRole = sessionStorage.getItem('selectedRole');
+
+  if (!selectedRole) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <h1 className="auth-logo">Hirely</h1>
+          <h2>No Role Selected</h2>
+          <p>Please go back and select your role</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            ← Back to Role Selection
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,6 +56,14 @@ const Signup = ({ onSwitchToLogin, onSignupSuccess }) => {
       return;
     }
 
+    console.log('Signup attempt with:', {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      phone: formData.phone,
+      role: selectedRole
+    });
+
     try {
       const response = await axios.post('http://localhost:5000/api/register', {
         name: formData.name,
@@ -40,12 +73,15 @@ const Signup = ({ onSwitchToLogin, onSignupSuccess }) => {
         role: selectedRole
       });
 
+      console.log('Signup response:', response.data);
+
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         onSignupSuccess(response.data.user);
       }
     } catch (err) {
+      console.error('Signup error:', err.response?.data);
       setError(err.response?.data?.message || 'Signup failed');
     } finally {
       setLoading(false);
@@ -55,6 +91,16 @@ const Signup = ({ onSwitchToLogin, onSignupSuccess }) => {
   return (
     <div className="auth-container">
       <div className="auth-card">
+        <button 
+          className="back-button"
+          onClick={() => {
+            sessionStorage.removeItem('selectedRole');
+            window.location.reload();
+          }}
+        >
+          ← Back to Role Selection
+        </button>
+        
         <h1 className="auth-logo">Hirely</h1>
         <h2>Create Account</h2>
         <p>Sign up as <strong>{selectedRole}</strong></p>
@@ -138,13 +184,26 @@ const Signup = ({ onSwitchToLogin, onSignupSuccess }) => {
           max-width: 450px;
           text-align: center;
           box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          position: relative;
+        }
+        .back-button {
+          position: absolute;
+          top: 20px;
+          left: 20px;
+          background: none;
+          border: none;
+          color: #667eea;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 500;
         }
         .auth-logo {
           font-size: 36px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #667eea);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           margin-bottom: 20px;
+          margin-top: 10px;
         }
         .auth-card h2 {
           color: #333;
@@ -178,7 +237,7 @@ const Signup = ({ onSwitchToLogin, onSignupSuccess }) => {
         button[type="submit"] {
           width: 100%;
           padding: 12px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #667eea);
           color: white;
           border: none;
           border-radius: 8px;
