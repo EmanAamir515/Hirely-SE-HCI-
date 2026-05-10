@@ -7,6 +7,7 @@ import ViewApplicants    from './ViewApplicants';
 import AllApplicants     from './AllApplicants';
 import ManageServices    from './ManageServices';
 import ManageProducts    from './ManageProducts';
+import ServiceRequests   from './ServiceRequests';
 
 const API = 'http://localhost:5000';
 
@@ -96,7 +97,8 @@ const EmployerDashboard = ({ user, onLogout }) => {
     'job-applicants': '👥 Job Applicants',
     'all-applicants': '👥 All Applicants',
     services:         '🔧 Services',
-    products:         '📦 Products'
+    products:         '📦 Products',
+    'service-requests': 'Service Requests'
   };
 
   return (
@@ -123,7 +125,7 @@ const EmployerDashboard = ({ user, onLogout }) => {
                 className="notif-btn"
                 onClick={() => {
                   setShowNotif(s => !s);
-                  if (!showNotif && unread > 0) markAllRead();
+                  if (showNotif && unread > 0) markAllRead();
                 }}
               >
                 🔔
@@ -252,6 +254,7 @@ const EmployerDashboard = ({ user, onLogout }) => {
 
           {activeTab === 'services'  && <ManageServices user={user} />}
           {activeTab === 'products'  && <ManageProducts user={user} />}
+          {activeTab === 'service-requests' && <ServiceRequests user={user} />}
 
         </div>
       </div>

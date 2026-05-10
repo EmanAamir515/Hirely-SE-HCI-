@@ -49,7 +49,7 @@ const MyApplications = ({ user }) => {
       <div className="ma-header">
         <div>
           <h2>My Applications</h2>
-          <p>Track all your job and internship applications</p>
+          <p>Keep Track of all your job and internship applications</p>
         </div>
         <span className="ma-total-badge">{applications.length} Total</span>
       </div>
@@ -73,22 +73,6 @@ const MyApplications = ({ user }) => {
             </div>
           );
         })}
-      </div>
-
-      {/* Filter tabs */}
-      <div className="ma-filter-row">
-        {filterOptions.map(f => (
-          <button
-            key={f}
-            className={`ma-filter-tab ${filter === f ? 'active' : ''}`}
-            onClick={() => setFilter(f)}
-          >
-            {f}
-            {f !== 'All' && (
-              <span className="ma-tab-count">{statusCounts[f]}</span>
-            )}
-          </button>
-        ))}
       </div>
 
       {/* Applications List */}
@@ -189,22 +173,6 @@ const MyApplications = ({ user }) => {
         .ma-sum-icon  { font-size: 22px; }
         .ma-sum-count { font-size: 22px; font-weight: 700; line-height: 1.2; }
         .ma-sum-label { font-size: 12px; color: #64748B; }
-
-        /* Filters */
-        .ma-filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
-        .ma-filter-tab {
-          padding: 7px 16px; border-radius: 20px;
-          border: 1.5px solid #E2E8F0;
-          background: #F8FAFC; color: #475569;
-          font-size: 13px; font-weight: 500; cursor: pointer;
-          transition: all 0.15s; display: flex; align-items: center; gap: 6px;
-        }
-        .ma-filter-tab:hover  { border-color: #667eea; color: #4338CA; }
-        .ma-filter-tab.active { background: #EEF2FF; color: #4338CA; border-color: #C7D2FE; font-weight: 600; }
-        .ma-tab-count {
-          background: #E0E7FF; color: #4338CA;
-          border-radius: 10px; padding: 1px 6px; font-size: 11px; font-weight: 700;
-        }
 
         /* Loading / Empty */
         .ma-loading { display: flex; flex-direction: column; gap: 12px; }

@@ -39,7 +39,12 @@ export const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ success: false, message: 'No token provided' });
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Normalise: support both old tokens (payload.id) and current tokens (payload.userId)
+    const rawId = decoded.userId ?? decoded.id;
+    const numericId = parseInt(rawId, 10);
+    if (isNaN(numericId)) throw new Error('Invalid userId in token');
+    req.user = { ...decoded, userId: numericId };
     next();
   } catch {
     return res.status(401).json({ success: false, message: 'Invalid token' });
@@ -704,33 +709,375 @@ export const checkEligibility = async (req, res) => {
 // ════════════════════════════════════════
 //  MARKETPLACE
 // ════════════════════════════════════════
+// In routes.js, replace the getMarketplace function
 export const getMarketplace = async (req, res) => {
   try {
     const pool = getPool();
     const [svc, prd] = await Promise.all([
-      pool.request().query(`SELECT s.*, c.CompanyName, u.Email AS ContactEmail
-        FROM Services s JOIN Companies c ON s.CompanyID=c.CompanyID
-        JOIN Users u ON c.CompanyID=u.UserID ORDER BY s.ServiceID DESC`),
-      pool.request().query(`SELECT p.*, c.CompanyName FROM Products p
-        JOIN Companies c ON p.CompanyID=c.CompanyID ORDER BY p.ProductID DESC`)
+      pool.request().query(`
+        SELECT s.*, c.CompanyName, c.Description as CompanyDescription,
+               u.Email AS ContactEmail, u.Phone AS ContactPhone
+        FROM Services s 
+        JOIN Companies c ON s.CompanyID = c.CompanyID
+        JOIN Users u ON c.CompanyID = u.UserID 
+        ORDER BY s.ServiceID DESC
+      `),
+      pool.request().query(`
+        SELECT p.*, c.CompanyName, c.Description as CompanyDescription,
+               u.Email AS ContactEmail, u.Phone AS ContactPhone
+        FROM Products p
+        JOIN Companies c ON p.CompanyID = c.CompanyID
+        JOIN Users u ON c.CompanyID = u.UserID 
+        ORDER BY p.ProductID DESC
+      `)
     ]);
     res.json({ success: true, services: svc.recordset, products: prd.recordset });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { 
+    console.error('getMarketplace:', err);
+    res.status(500).json({ success: false, message: err.message }); 
+  }
 };
 
-export const requestService = async (req, res) => {
+
+
+// ════════════════════════════════════════
+//  SERVICE REQUESTS (FOR BOTH SERVICES & PRODUCTS)
+// ════════════════════════════════════════
+
+// POST /api/service-requests - Create a new service/product request
+export const createServiceRequest = async (req, res) => {
   try {
     const pool = getPool();
-    const { serviceId, message } = req.body;
+    const { serviceId, productId, message } = req.body;
+
+    const userId = parseInt(req.user.userId, 10);
+    if (isNaN(userId)) {
+      return res.status(401).json({ success: false, message: 'Invalid session. Please log out and log back in.' });
+    }
+
+    let requestType    = '';
+    let itemTitle      = '';
+    let employerId     = null;
+    let serviceIdToUse = null;
+    let messageToStore = '';
+
+    // ── Service request ─────────────────────────────────────────────
+    if (serviceId) {
+      const sid = parseInt(serviceId, 10);
+      if (isNaN(sid)) return res.status(400).json({ success: false, message: 'Invalid service ID' });
+
+      // ✅ No JOIN, no duplicate column names — CompanyID comes from Services only
+      const svcRes = await pool.request()
+        .input('sid', sql.Int, sid)
+        .query('SELECT ServiceID, Title, CompanyID FROM Services WHERE ServiceID = @sid');
+
+      if (!svcRes.recordset.length)
+        return res.status(404).json({ success: false, message: 'Service not found' });
+
+      const svc      = svcRes.recordset[0];
+      employerId     = parseInt(svc.CompanyID, 10);
+      itemTitle      = svc.Title;
+      requestType    = 'service';
+      serviceIdToUse = sid;
+      messageToStore = message || `Interested in your service: ${itemTitle}`;
+    }
+
+    // ── Product request ──────────────────────────────────────────────
+    else if (productId) {
+      const pid = parseInt(productId, 10);
+      if (isNaN(pid)) return res.status(400).json({ success: false, message: 'Invalid product ID' });
+
+      // ✅ No JOIN, no duplicate column names
+      const prdRes = await pool.request()
+        .input('pid', sql.Int, pid)
+        .query('SELECT ProductID, ProductName, CompanyID FROM Products WHERE ProductID = @pid');
+
+      if (!prdRes.recordset.length)
+        return res.status(404).json({ success: false, message: 'Product not found' });
+
+      const prd      = prdRes.recordset[0];
+      employerId     = parseInt(prd.CompanyID, 10);
+      itemTitle      = prd.ProductName;
+      requestType    = 'product';
+      serviceIdToUse = null;   // ServiceRequests.ServiceID is nullable — no DB change needed
+      // Store as JSON so accept/reject/complete can later recover the product name
+      messageToStore = JSON.stringify({
+        productId: pid,
+        title:     itemTitle,
+        text:      message || `Interested in your product: ${itemTitle}`
+      });
+    }
+    else {
+      return res.status(400).json({ success: false, message: 'Service ID or Product ID required' });
+    }
+
+    if (isNaN(employerId)) {
+      return res.status(500).json({ success: false, message: 'Could not resolve employer. Contact admin.' });
+    }
+
+    // ── Insert into ServiceRequests ──────────────────────────────────
+    const insertResult = await pool.request()
+      .input('userId',    sql.Int,           userId)
+      .input('serviceId', sql.Int,           serviceIdToUse)   // null for products → SQL NULL
+      .input('message',   sql.NVarChar(500), messageToStore)
+      .input('status',    sql.NVarChar(50),  'Pending')
+      .query(`
+        INSERT INTO ServiceRequests (UserID, ServiceID, Message, Status)
+        OUTPUT INSERTED.RequestID
+        VALUES (@userId, @serviceId, @message, @status)
+      `);
+
+    const requestId = insertResult.recordset[0].RequestID;
+
+    // ── Notify the employer ──────────────────────────────────────────
+    const reqNameRes = await pool.request()
+      .input('uid', sql.Int, userId)
+      .query('SELECT Name FROM Users WHERE UserID = @uid');
+    const requesterName = reqNameRes.recordset[0]?.Name || 'Someone';
+
     await pool.request()
-      .input('uid', sql.Int,           req.user.userId)
-      .input('sid', sql.Int,           serviceId)
-      .input('msg', sql.NVarChar(100), message || '')
-      .query('INSERT INTO ServiceRequests(UserID,ServiceID,Message) VALUES(@uid,@sid,@msg)');
-    res.json({ success: true, message: 'Service request sent' });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+      .input('empId',   sql.Int,           employerId)
+      .input('msg',     sql.NVarChar(500),
+        `${requesterName} has requested your ${requestType}: "${itemTitle}". ${message ? 'Message: ' + message : ''}`.trim())
+      .input('type',    sql.NVarChar(50),  `${requestType}_request`)
+      .query('INSERT INTO Notifications (UserID, Message, Type) VALUES (@empId, @msg, @type)');
+
+    res.json({
+      success: true,
+      requestId,
+      message: `${requestType.charAt(0).toUpperCase() + requestType.slice(1)} request sent successfully`
+    });
+  } catch (error) {
+    console.error('createServiceRequest:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
+// GET /api/service-requests/my - Get requests for employer (both services and products)
+export const getServiceRequests = async (req, res) => {
+  try {
+    const pool = getPool();
+    const userId = parseInt(req.user.userId, 10);
+
+    // ── 1. Service requests for this company ─────────────────────────
+    const svcResult = await pool.request()
+      .input('companyId', sql.Int, userId)
+      .query(`
+        SELECT sr.RequestID, sr.UserID, sr.ServiceID, sr.RequestDate, sr.Message, sr.Status,
+               s.Title        AS ServiceTitle,
+               'service'      AS RequestType,
+               u.Name         AS RequesterName,
+               u.Email        AS RequesterEmail,
+               u.Phone        AS RequesterPhone
+        FROM ServiceRequests sr
+        JOIN Services s ON sr.ServiceID = s.ServiceID
+        JOIN Users    u ON sr.UserID    = u.UserID
+        WHERE s.CompanyID = @companyId
+        ORDER BY sr.RequestDate DESC
+      `);
+
+    // ── 2. Product requests (ServiceID IS NULL) ──────────────────────
+    //    Message column was stored as JSON: { productId, text }
+    const rawProd = await pool.request()
+      .query(`
+        SELECT sr.RequestID, sr.UserID, sr.ServiceID, sr.RequestDate, sr.Message, sr.Status,
+               u.Name  AS RequesterName,
+               u.Email AS RequesterEmail,
+               u.Phone AS RequesterPhone
+        FROM ServiceRequests sr
+        JOIN Users u ON sr.UserID = u.UserID
+        WHERE sr.ServiceID IS NULL
+        ORDER BY sr.RequestDate DESC
+      `);
+
+    const productRequests = [];
+    for (const pr of rawProd.recordset) {
+      try {
+        const parsed = JSON.parse(pr.Message);
+        if (!parsed.productId) continue;
+
+        const prodRes = await pool.request()
+          .input('pid', sql.Int, parsed.productId)
+          .input('cid', sql.Int, userId)
+          .query('SELECT ProductName FROM Products WHERE ProductID = @pid AND CompanyID = @cid');
+
+        if (!prodRes.recordset.length) continue;  // belongs to a different company
+
+        productRequests.push({
+          ...pr,
+          ServiceTitle: prodRes.recordset[0].ProductName,
+          RequestType:  'product',
+          Message:      parsed.text || pr.Message,   // show human-readable text
+        });
+      } catch (_) { /* skip rows whose Message isn't JSON */ }
+    }
+
+    // Merge & sort newest-first
+    const all = [...svcResult.recordset, ...productRequests]
+      .sort((a, b) => new Date(b.RequestDate) - new Date(a.RequestDate));
+
+    res.json({ success: true, requests: all });
+  } catch (error) {
+    console.error('getServiceRequests:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /api/service-requests/:id/accept
+export const acceptServiceRequest = async (req, res) => {
+  try {
+    const pool = getPool();
+    const requestId = parseInt(req.params.id, 10);
+
+    // ✅ Status stored as 'Accepted' so the UI check req.Status.toLowerCase()==='accepted' works
+    await pool.request()
+      .input('requestId', sql.Int,          requestId)
+      .input('status',    sql.NVarChar(50), 'Accepted')
+      .query('UPDATE ServiceRequests SET Status = @status WHERE RequestID = @requestId');
+
+    // ✅ LEFT JOIN so product rows (ServiceID = NULL) are still returned
+    const rr = await pool.request()
+      .input('requestId', sql.Int, requestId)
+      .query(`
+        SELECT sr.UserID, sr.Message, sr.ServiceID,
+               s.Title   AS ServiceTitle,
+               u.Name    AS RequesterName
+        FROM ServiceRequests sr
+        LEFT JOIN Services s ON sr.ServiceID = s.ServiceID
+        JOIN  Users u        ON sr.UserID     = u.UserID
+        WHERE sr.RequestID = @requestId
+      `);
+
+    if (rr.recordset.length) {
+      const row = rr.recordset[0];
+
+      // ── Decrement stock if this is a product request ─────────────
+      // Product requests have ServiceID = NULL and Message stored as JSON
+      if (row.ServiceID === null && row.Message) {
+        try {
+          const parsed = JSON.parse(row.Message);
+          if (parsed.productId) {
+            await pool.request()
+              .input('pid', sql.Int, parsed.productId)
+              .query(`
+                UPDATE Products
+                SET StockQuantity = CASE
+                  WHEN StockQuantity > 0 THEN StockQuantity - 1
+                  ELSE 0
+                END
+                WHERE ProductID = @pid
+              `);
+          }
+        } catch (_) {} // non-JSON message means it's not a product request
+      }
+
+      // Resolve item title for notification
+      let itemTitle = row.ServiceTitle;
+      if (!itemTitle && row.Message) {
+        try { itemTitle = JSON.parse(row.Message).title; } catch (_) {}
+      }
+      itemTitle = itemTitle || 'your request';
+
+      await pool.request()
+        .input('uid', sql.Int,           row.UserID)
+        .input('msg', sql.NVarChar(500), `Your request for "${itemTitle}" has been accepted! The employer will contact you soon.`)
+        .input('typ', sql.NVarChar(50),  'request_accepted')
+        .query('INSERT INTO Notifications (UserID, Message, Type) VALUES (@uid, @msg, @typ)');
+    }
+
+    res.json({ success: true, message: 'Request accepted' });
+  } catch (error) {
+    console.error('acceptServiceRequest:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /api/service-requests/:id/reject
+export const rejectServiceRequest = async (req, res) => {
+  try {
+    const pool = getPool();
+    const requestId = parseInt(req.params.id, 10);
+
+    // ✅ 'Rejected' matches UI's toLowerCase() === 'rejected' check
+    await pool.request()
+      .input('requestId', sql.Int,          requestId)
+      .input('status',    sql.NVarChar(50), 'Rejected')
+      .query('UPDATE ServiceRequests SET Status = @status WHERE RequestID = @requestId');
+
+    // ✅ LEFT JOIN so product rows work too
+    const rr = await pool.request()
+      .input('requestId', sql.Int, requestId)
+      .query(`
+        SELECT sr.UserID, sr.Message, s.Title AS ServiceTitle
+        FROM ServiceRequests sr
+        LEFT JOIN Services s ON sr.ServiceID = s.ServiceID
+        WHERE sr.RequestID = @requestId
+      `);
+
+    if (rr.recordset.length) {
+      const row = rr.recordset[0];
+      let itemTitle = row.ServiceTitle;
+      if (!itemTitle && row.Message) {
+        try { itemTitle = JSON.parse(row.Message).title; } catch (_) {}
+      }
+      itemTitle = itemTitle || 'your request';
+
+      await pool.request()
+        .input('uid', sql.Int,           row.UserID)
+        .input('msg', sql.NVarChar(500), `Your request for "${itemTitle}" has been declined.`)
+        .input('typ', sql.NVarChar(50),  'request_rejected')
+        .query('INSERT INTO Notifications (UserID, Message, Type) VALUES (@uid, @msg, @typ)');
+    }
+
+    res.json({ success: true, message: 'Request rejected' });
+  } catch (error) {
+    console.error('rejectServiceRequest:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PUT /api/service-requests/:id/complete
+export const completeServiceRequest = async (req, res) => {
+  try {
+    const pool = getPool();
+    const requestId = parseInt(req.params.id, 10);
+
+    await pool.request()
+      .input('requestId', sql.Int,          requestId)
+      .input('status',    sql.NVarChar(50), 'Completed')
+      .query('UPDATE ServiceRequests SET Status = @status WHERE RequestID = @requestId');
+
+    // ✅ LEFT JOIN so product rows work too
+    const rr = await pool.request()
+      .input('requestId', sql.Int, requestId)
+      .query(`
+        SELECT sr.UserID, sr.Message, s.Title AS ServiceTitle
+        FROM ServiceRequests sr
+        LEFT JOIN Services s ON sr.ServiceID = s.ServiceID
+        WHERE sr.RequestID = @requestId
+      `);
+
+    if (rr.recordset.length) {
+      const row = rr.recordset[0];
+      let itemTitle = row.ServiceTitle;
+      if (!itemTitle && row.Message) {
+        try { itemTitle = JSON.parse(row.Message).title; } catch (_) {}
+      }
+      itemTitle = itemTitle || 'your request';
+
+      await pool.request()
+        .input('uid', sql.Int,           row.UserID)
+        .input('msg', sql.NVarChar(500), `Your request for "${itemTitle}" has been completed! 🎉`)
+        .input('typ', sql.NVarChar(50),  'request_completed')
+        .query('INSERT INTO Notifications (UserID, Message, Type) VALUES (@uid, @msg, @typ)');
+    }
+
+    res.json({ success: true, message: 'Marked as completed' });
+  } catch (error) {
+    console.error('completeServiceRequest:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 // ════════════════════════════════════════
 //  NOTIFICATIONS
 // ════════════════════════════════════════

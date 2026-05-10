@@ -8,6 +8,7 @@ const menuItems = [
   { id: 'all-applicants', label: 'All Applicants'  },
   { id: 'services',       label: 'Services'        },
   { id: 'products',       label: 'Products'        },
+  { id: 'service-requests', label: 'Service Requests' },
 ];
 
 const EmployerSidebar = ({ activeTab, setActiveTab, user, onLogout, companyLogo }) => {

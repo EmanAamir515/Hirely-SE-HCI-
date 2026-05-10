@@ -122,7 +122,7 @@ const CandidateDashboard = ({ user, onLogout }) => {
               className="cd-notif-btn"
               onClick={() => {
                 setShowNotif(s => !s);
-                if (!showNotif && unread > 0) markAllRead();
+                if (showNotif && unread > 0) markAllRead();
               }}
             >
               🔔

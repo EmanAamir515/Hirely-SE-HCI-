@@ -24,26 +24,57 @@ const ServiceMarketplace = ({ user }) => {
     } catch (_) {} finally { setLoading(false); }
   };
 
-  const handleRequest = async (serviceId) => {
-    setRequesting(serviceId);
+  // ── Service request handler ──────────────────────────────────────
+  const handleRequest = async (serviceId, companyName, serviceTitle) => {
+    setRequesting(`svc-${serviceId}`);
     try {
       const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:5000/api/service-requests', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceId, message: 'Interested in your service.' })
+        body: JSON.stringify({
+          serviceId,
+          message: `Interested in your service: ${serviceTitle}`,
+        })
       });
       const data = await res.json();
-      if (data.success) {
-        setMsg({ id: serviceId, type: 'success', text: 'Request sent!' });
-      } else {
-        setMsg({ id: serviceId, type: 'error', text: data.message || 'Failed' });
-      }
+      setMsg({
+        id: `svc-${serviceId}`,
+        type: data.success ? 'success' : 'error',
+        text: data.success ? '✅ Request sent! Employer notified.' : (data.message || 'Failed'),
+      });
     } catch (_) {
-      setMsg({ id: serviceId, type: 'error', text: 'Network error' });
+      setMsg({ id: `svc-${serviceId}`, type: 'error', text: 'Network error' });
     } finally {
       setRequesting(null);
-      setTimeout(() => setMsg({ id: null, type: '', text: '' }), 3000);
+      setTimeout(() => setMsg({ id: null, type: '', text: '' }), 3500);
+    }
+  };
+
+  // ── Product request handler ──────────────────────────────────────
+  const handleProductRequest = async (productId, companyName, productName) => {
+    setRequesting(`prd-${productId}`);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/service-requests', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId,
+          message: `Interested in purchasing: ${productName}`,
+        })
+      });
+      const data = await res.json();
+      setMsg({
+        id: `prd-${productId}`,
+        type: data.success ? 'success' : 'error',
+        text: data.success ? '✅ Request sent! Employer notified.' : (data.message || 'Failed'),
+      });
+    } catch (_) {
+      setMsg({ id: `prd-${productId}`, type: 'error', text: 'Network error' });
+    } finally {
+      setRequesting(null);
+      setTimeout(() => setMsg({ id: null, type: '', text: '' }), 3500);
     }
   };
 
@@ -129,6 +160,16 @@ const ServiceMarketplace = ({ user }) => {
                     <div className="sm-card-info">
                       <h4 className="sm-card-title">{s.Title}</h4>
                       <span className="sm-company-name">{s.CompanyName}</span>
+                      {s.ContactEmail && (
+                        <span className="sm-contact-info">
+                           {s.ContactEmail}
+                        </span>
+                      )}
+                      {s.ContactPhone && (
+                        <span className="sm-contact-info">
+                           {s.ContactPhone}
+                        </span>
+                      )}
                     </div>
                     {s.Category && (
                       <span
@@ -151,24 +192,16 @@ const ServiceMarketplace = ({ user }) => {
                       {s.Price != null ? `$${parseFloat(s.Price).toLocaleString()}` : 'Contact for pricing'}
                     </span>
                     <div className="sm-actions">
-                      {msg.id === s.ServiceID && msg.text ? (
+                      {msg.id === `svc-${s.ServiceID}` && msg.text ? (
                         <span className={`sm-inline-msg ${msg.type}`}>{msg.text}</span>
                       ) : (
                         <button
                           className="sm-request-btn"
-                          onClick={() => handleRequest(s.ServiceID)}
-                          disabled={requesting === s.ServiceID}
+                          onClick={() => handleRequest(s.ServiceID, s.CompanyName, s.Title)}
+                          disabled={requesting === `svc-${s.ServiceID}`}
                         >
-                          {requesting === s.ServiceID ? '⏳' : ' Request'}
+                          {requesting === `svc-${s.ServiceID}` ? ' Sending...' : ' Request Service'}
                         </button>
-                      )}
-                      {s.ContactEmail && (
-                        <a
-                          className="sm-contact-btn"
-                          href={`mailto:${s.ContactEmail}?subject=Inquiry: ${s.Title}`}
-                        >
-                           Contact
-                        </a>
                       )}
                     </div>
                   </div>
@@ -185,6 +218,16 @@ const ServiceMarketplace = ({ user }) => {
                   <div className="sm-card-info">
                     <h4 className="sm-card-title">{p.ProductName}</h4>
                     <span className="sm-company-name">{p.CompanyName}</span>
+                    {p.ContactEmail && (
+                      <span className="sm-contact-info">
+                         {p.ContactEmail}
+                      </span>
+                    )}
+                    {p.ContactPhone && (
+                      <span className="sm-contact-info">
+                         {p.ContactPhone}
+                      </span>
+                    )}
                   </div>
                   {p.StockQuantity !== undefined && (
                     <span className={`sm-stock-badge ${p.StockQuantity > 0 ? 'in' : 'out'}`}>
@@ -203,9 +246,23 @@ const ServiceMarketplace = ({ user }) => {
                   <span className="sm-price">
                     {p.Price != null ? `$${parseFloat(p.Price).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : 'Price on request'}
                   </span>
-                  <button className="sm-request-btn" disabled>
-                    View Details
-                  </button>
+                  <div className="sm-actions">
+                    {msg.id === `prd-${p.ProductID}` && msg.text ? (
+                      <span className={`sm-inline-msg ${msg.type}`}>{msg.text}</span>
+                    ) : (
+                      <button
+                        className="sm-request-btn"
+                        onClick={() => handleProductRequest(p.ProductID, p.CompanyName, p.ProductName)}
+                        disabled={requesting === `prd-${p.ProductID}` || p.StockQuantity === 0}
+                      >
+                        {requesting === `prd-${p.ProductID}`
+                          ? '⏳ Sending...'
+                          : p.StockQuantity === 0
+                            ? '🚫 Out of Stock'
+                            : ' Request Product'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
@@ -259,7 +316,7 @@ const ServiceMarketplace = ({ user }) => {
         /* Loading / Empty */
         .sm-loading { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
         .sm-skeleton {
-          height: 160px; border-radius: 14px;
+          height: 200px; border-radius: 14px;
           background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
           background-size: 200% 100%; animation: shimmer 1.4s infinite;
         }
@@ -280,16 +337,20 @@ const ServiceMarketplace = ({ user }) => {
         }
         .sm-card:hover { border-color: #C7D2FE; box-shadow: 0 6px 20px rgba(102,126,234,0.1); transform: translateY(-1px); }
 
-        .sm-card-top { display: flex; align-items: center; gap: 12px; }
+        .sm-card-top { display: flex; align-items: flex-start; gap: 12px; }
         .sm-company-logo {
-          width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
-          background: linear-gradient(135deg, #667eea);
+          width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+          background: linear-gradient(135deg, #667eea, #764ba2);
           display: flex; align-items: center; justify-content: center;
-          color: #fff; font-weight: 700; font-size: 17px;
+          color: #fff; font-weight: 700; font-size: 20px;
         }
         .sm-card-info { flex: 1; min-width: 0; }
-        .sm-card-title   { font-size: 15px; font-weight: 600; color: #1E293B; margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sm-company-name { font-size: 12px; color: #64748B; }
+        .sm-card-title   { font-size: 15px; font-weight: 600; color: #1E293B; margin: 0 0 4px; }
+        .sm-company-name { font-size: 13px; color: #64748B; display: block; margin-bottom: 4px; }
+        .sm-contact-info {
+          font-size: 11px; color: #667eea; display: block;
+          margin-top: 2px;
+        }
         .sm-cat-badge {
           padding: 4px 10px; border-radius: 20px;
           font-size: 11px; font-weight: 600; white-space: nowrap;
@@ -313,22 +374,13 @@ const ServiceMarketplace = ({ user }) => {
 
         .sm-request-btn {
           padding: 8px 16px;
-          background: linear-gradient(135deg, #667eea );
+          background: linear-gradient(135deg, #667eea, #764ba2);
           color: #fff; border: none; border-radius: 8px;
           font-size: 13px; font-weight: 600; cursor: pointer;
-          transition: opacity 0.2s;
+          transition: opacity 0.2s, transform 0.2s;
         }
         .sm-request-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .sm-request-btn:not(:disabled):hover { opacity: 0.88; }
-
-        .sm-contact-btn {
-          padding: 8px 14px;
-          background: #F1F5F9; color: #475569;
-          border: 1.5px solid #E2E8F0; border-radius: 8px;
-          font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none;
-          transition: all 0.15s;
-        }
-        .sm-contact-btn:hover { background: #E2E8F0; }
+        .sm-request-btn:not(:disabled):hover { opacity: 0.9; transform: translateY(-1px); }
 
         .sm-inline-msg {
           font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 8px;
