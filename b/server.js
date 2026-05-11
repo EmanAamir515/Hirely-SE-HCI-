@@ -23,6 +23,7 @@ import {
   createServiceRequest, getServiceRequests,
   acceptServiceRequest, rejectServiceRequest, completeServiceRequest,
   getNotifications, markAllNotificationsRead,
+  createNotification,
 } from './routes.js';
 
 dotenv.config();
@@ -96,8 +97,11 @@ app.put('/api/service-requests/:id/accept',  verifyToken, acceptServiceRequest);
 app.put('/api/service-requests/:id/reject',  verifyToken, rejectServiceRequest);
 app.put('/api/service-requests/:id/complete', verifyToken, completeServiceRequest);
 
+
+
 // Notifications
 app.get('/api/notifications',          verifyToken, getNotifications);
+app.post('/api/notifications',         verifyToken, createNotification);  // ← ADD THIS LINE
 app.put('/api/notifications/read-all', verifyToken, markAllNotificationsRead);
 
 // Error handlers

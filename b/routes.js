@@ -336,24 +336,85 @@ export const getCompanyProducts = async (req, res) => {
 // ════════════════════════════════════════
 //  APPLICATIONS
 // ════════════════════════════════════════
+// export const applyForJob = async (req, res) => {
+//   try {
+//     const { jobId, coverNote } = req.body;
+//     const pool = getPool();
+//     if (!jobId) return res.status(400).json({ success:false, message:'Job ID required' });
+//     const dup = await pool.request()
+//       .input('CID', sql.Int, req.user.userId).input('JID', sql.Int, jobId)
+//       .query('SELECT 1 FROM Applications WHERE CandidateID=@CID AND JobID=@JID');
+//     if (dup.recordset.length)
+//       return res.status(400).json({ success:false, message:'Already applied' });
+//     const r = await pool.request()
+//       .input('CID',  sql.Int,           req.user.userId)
+//       .input('JID',  sql.Int,           jobId)
+//       .input('note', sql.NVarChar(100), coverNote || '')
+//       .query(`INSERT INTO Applications(CandidateID,JobID,CoverNote)
+//               OUTPUT INSERTED.ApplicationID VALUES(@CID,@JID,@note)`);
+//     res.status(201).json({ success:true, message:'Applied', applicationId:r.recordset[0].ApplicationID });
+//   } catch (err) { res.status(500).json({ success:false, message:'Server error' }); }
+// };
+
 export const applyForJob = async (req, res) => {
   try {
     const { jobId, coverNote } = req.body;
     const pool = getPool();
     if (!jobId) return res.status(400).json({ success:false, message:'Job ID required' });
+    
+    // Check for duplicate
     const dup = await pool.request()
-      .input('CID', sql.Int, req.user.userId).input('JID', sql.Int, jobId)
+      .input('CID', sql.Int, req.user.userId)
+      .input('JID', sql.Int, jobId)
       .query('SELECT 1 FROM Applications WHERE CandidateID=@CID AND JobID=@JID');
     if (dup.recordset.length)
       return res.status(400).json({ success:false, message:'Already applied' });
+    
+    // Insert application
     const r = await pool.request()
       .input('CID',  sql.Int,           req.user.userId)
       .input('JID',  sql.Int,           jobId)
       .input('note', sql.NVarChar(100), coverNote || '')
       .query(`INSERT INTO Applications(CandidateID,JobID,CoverNote)
               OUTPUT INSERTED.ApplicationID VALUES(@CID,@JID,@note)`);
-    res.status(201).json({ success:true, message:'Applied', applicationId:r.recordset[0].ApplicationID });
-  } catch (err) { res.status(500).json({ success:false, message:'Server error' }); }
+    
+    const applicationId = r.recordset[0].ApplicationID;
+
+    // Get candidate and job info for notification
+    const candidateInfo = await pool.request()
+      .input('uid', sql.Int, req.user.userId)
+      .query('SELECT Name FROM Users WHERE UserID = @uid');
+    
+    const jobInfo = await pool.request()
+      .input('jid', sql.Int, jobId)
+      .query('SELECT j.CompanyID, j.Title FROM Jobs j WHERE j.JobID = @jid');
+    
+    const candidateName = candidateInfo.recordset[0]?.Name || 'Someone';
+    const companyId = jobInfo.recordset[0]?.CompanyID;
+    const jobTitle = jobInfo.recordset[0]?.Title || 'a position';
+    
+    // Notify employer
+    if (companyId) {
+      await pool.request()
+        .input('userId', sql.Int, companyId)
+        .input('message', sql.NVarChar(sql.MAX), 
+          `${candidateName} has applied for the position: "${jobTitle}"`)
+        .input('type', sql.NVarChar(50), 'new_application')
+        .query(`INSERT INTO Notifications (UserID, Message, Type) 
+                VALUES (@userId, @message, @type)`);
+      
+      console.log(`✅ Notification sent to employer ${companyId}: ${candidateName} applied for ${jobTitle}`);
+    }
+    
+    res.status(201).json({ 
+      success: true, 
+      message: 'Applied successfully!', 
+      applicationId 
+    });
+  } catch (err) { 
+    console.error('applyForJob error:', err);
+    res.status(500).json({ success:false, message:'Server error' }); 
+  }
 };
 
 export const getMyApplications = async (req, res) => {
@@ -383,16 +444,101 @@ export const getJobApplicants = async (req, res) => {
   } catch (err) { res.status(500).json({ success:false, message:'Server error' }); }
 };
 
+// export const updateApplicationStatus = async (req, res) => {
+//   try {
+//     const pool = getPool();
+//     await pool.request()
+//       .input('AID',    sql.Int,          req.body.applicationId)
+//       .input('Status', sql.NVarChar(50), req.body.status)
+//       .query('UPDATE Applications SET Status=@Status WHERE ApplicationID=@AID');
+//     res.json({ success:true, message:'Status updated' });
+//   } catch (err) { res.status(500).json({ success:false, message:'Server error' }); }
+// };
+
 export const updateApplicationStatus = async (req, res) => {
   try {
     const pool = getPool();
+    const { applicationId, status } = req.body;
+    
+    // Update the status
     await pool.request()
-      .input('AID',    sql.Int,          req.body.applicationId)
-      .input('Status', sql.NVarChar(50), req.body.status)
+      .input('AID',    sql.Int,          applicationId)
+      .input('Status', sql.NVarChar(50), status)
       .query('UPDATE Applications SET Status=@Status WHERE ApplicationID=@AID');
+    
+    // ── Send notification to candidate ──────────────────────────
+    try {
+      const appInfo = await pool.request()
+        .input('aid', sql.Int, applicationId)
+        .query(`
+          SELECT a.CandidateID, j.Title, u.Name as CandidateName,
+                 c.CompanyName, j.CompanyID
+          FROM Applications a
+          JOIN Jobs j ON a.JobID = j.JobID
+          JOIN Companies c ON j.CompanyID = c.CompanyID
+          JOIN Users u ON a.CandidateID = u.UserID
+          WHERE a.ApplicationID = @aid
+        `);
+      
+      if (appInfo.recordset.length > 0) {
+        const info = appInfo.recordset[0];
+        const candidateUserId = info.CandidateID;
+        const jobTitle = info.Title;
+        
+        // Map status to user-friendly message
+        const statusMessages = {
+          Shortlisted: `🌟 Great news! Your application for "${jobTitle}" has been shortlisted.`,
+          Interview: `🎙️ You've been selected for an AI Interview for "${jobTitle}". Log in to take it now!`,
+          Accepted: `🎉 Congratulations! Your application for "${jobTitle}" has been accepted!`,
+          Rejected: `Thank you for applying to "${jobTitle}". Unfortunately, you were not selected this time.`,
+          Pending: `Your application for "${jobTitle}" status has been updated to Pending.`,
+        };
+        
+        const msg = statusMessages[status] || `Your application status changed to: ${status}`;
+        
+        // Notify candidate
+        await pool.request()
+          .input('userId', sql.Int, candidateUserId)
+          .input('message', sql.NVarChar(sql.MAX), msg)
+          .input('type', sql.NVarChar(50), 'status_update')
+          .query(`INSERT INTO Notifications (UserID, Message, Type) 
+                  VALUES (@userId, @message, @type)`);
+      }
+    } catch (notifErr) {
+      console.warn('Failed to create candidate notification:', notifErr);
+    }
+    // ─────────────────────────────────────────────────────────────
+
     res.json({ success:true, message:'Status updated' });
-  } catch (err) { res.status(500).json({ success:false, message:'Server error' }); }
+  } catch (err) { 
+    console.error('updateApplicationStatus:', err);
+    res.status(500).json({ success:false, message:'Server error' }); 
+  }
 };
+
+
+// export const getAllCompanyApplicants = async (req, res) => {
+//   try {
+//     const pool = getPool();
+//     const r = await pool.request().input('CID', sql.Int, req.user.userId).query(`
+//       SELECT a.ApplicationID, a.Status, a.AppliedDate, a.CoverNote,
+//              u.Name AS CandidateName, u.Email, u.Phone,
+//              c.Education, c.Experience, c.CVPath,
+//              j.Title AS JobTitle, j.JobID, j.RequiredSkills
+//       FROM Applications a
+//       JOIN Candidates c ON a.CandidateID=c.CandidateID
+//       JOIN Users u ON c.CandidateID=u.UserID
+//       JOIN Jobs j ON a.JobID=j.JobID
+//       WHERE j.CompanyID=@CID ORDER BY a.AppliedDate DESC`);
+//     res.json({ success:true, applicants:r.recordset });
+//   } catch (err) { res.status(500).json({ success:false, message:'Server error' }); }
+// };
+
+
+// ════════════════════════════════════════
+//  EDIT JOB
+// ════════════════════════════════════════
+
 
 export const getAllCompanyApplicants = async (req, res) => {
   try {
@@ -400,6 +546,7 @@ export const getAllCompanyApplicants = async (req, res) => {
     const r = await pool.request().input('CID', sql.Int, req.user.userId).query(`
       SELECT a.ApplicationID, a.Status, a.AppliedDate, a.CoverNote,
              u.Name AS CandidateName, u.Email, u.Phone,
+             u.UserID AS CandidateUserID,
              c.Education, c.Experience, c.CVPath,
              j.Title AS JobTitle, j.JobID, j.RequiredSkills
       FROM Applications a
@@ -410,11 +557,6 @@ export const getAllCompanyApplicants = async (req, res) => {
     res.json({ success:true, applicants:r.recordset });
   } catch (err) { res.status(500).json({ success:false, message:'Server error' }); }
 };
-
-
-// ════════════════════════════════════════
-//  EDIT JOB
-// ════════════════════════════════════════
 export const editJob = async (req, res) => {
   try {
     const pool = getPool();
@@ -1088,6 +1230,33 @@ export const getNotifications = async (req, res) => {
       .query('SELECT * FROM Notifications WHERE UserID=@uid ORDER BY CreatedAt DESC');
     res.json({ success: true, notifications: r.recordset });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+export const createNotification = async (req, res) => {
+  try {
+    const pool = getPool();
+    const { userId, message } = req.body;
+    
+    if (!userId || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'userId and message are required' 
+      });
+    }
+    
+    await pool.request()
+      .input('userId', sql.Int, userId)
+      .input('message', sql.NVarChar(sql.MAX), message)
+      .input('type', sql.NVarChar(50), 'status_update')
+      .query(`INSERT INTO Notifications (UserID, Message, Type) 
+              VALUES (@userId, @message, @type)`);
+    
+    console.log(`✅ Notification created for user ${userId}: ${message}`);
+    res.json({ success: true, message: 'Notification sent' });
+  } catch (err) {
+    console.error('createNotification error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 export const markAllNotificationsRead = async (req, res) => {
