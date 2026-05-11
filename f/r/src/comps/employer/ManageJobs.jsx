@@ -389,7 +389,7 @@ const ManageJobs = ({ user, onViewApplicants }) => {
 
         .mj-logo {
           width: 46px; height: 46px; border-radius: 12px;
-          background: linear-gradient(135deg, #667eea );
+          background: linear-gradient(135deg, #4f3fbd );
           display: flex; align-items: center; justify-content: center;
           color: #fff; font-weight: 700; font-size: 18px; flex-shrink: 0;
         }
@@ -402,7 +402,7 @@ const ManageJobs = ({ user, onViewApplicants }) => {
         .mj-title { font-size: 15px; font-weight: 600; color: #1E293B; margin: 0; flex: 1; min-width: 0; }
         .mj-status-badge {
           padding: 4px 12px; border-radius: 20px;
-          font-size: 12px; font-weight: 600; white-space: nowrap;
+          font-size: 15px; font-weight: 600; white-space: nowrap;
         }
         .mj-expired-tag {
           padding: 3px 10px; border-radius: 12px;
@@ -413,13 +413,13 @@ const ManageJobs = ({ user, onViewApplicants }) => {
         .mj-meta {
           display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;
         }
-        .mj-meta span { font-size: 12px; color: #64748B; }
+        .mj-meta span { font-size: 14px; color: #64748B; }
         .mj-applicant-count { color: #4338CA !important; font-weight: 600 !important; }
 
         .mj-skills { display: flex; flex-wrap: wrap; gap: 6px; }
         .mj-skill-tag {
           padding: 3px 10px; background: #F1F5F9; color: #475569;
-          border-radius: 20px; font-size: 11px; font-weight: 500;
+          border-radius: 20px; font-size: 13px; font-weight: 500;
         }
         .mj-skill-more { font-size: 11px; color: #94A3B8; padding: 3px 0; }
 

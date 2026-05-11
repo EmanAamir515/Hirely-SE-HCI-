@@ -180,7 +180,7 @@ const CandidateDashboard = ({ user, onLogout }) => {
         .cd-root {
           display: flex;
           min-height: 100vh;
-          background: #F1F5F9;
+          background: #98c9e2;
           font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
@@ -188,7 +188,7 @@ const CandidateDashboard = ({ user, onLogout }) => {
         .cd-sidebar {
           position: fixed; top: 0; left: 0;
           width: 250px; height: 100vh;
-          background: linear-gradient(160deg, #667eea );
+          background: linear-gradient(160deg, #2b3f98 );
           color: white;
           display: flex; flex-direction: column;
           overflow: hidden;
@@ -223,7 +223,7 @@ const CandidateDashboard = ({ user, onLogout }) => {
         }
         .cd-user-avatar {
           width: 36px; height: 36px;
-          background: rgba(255,255,255,0.25);
+          background: rgba(96, 212, 233, 0.93);
           border-radius: 50%;
           display: flex; align-items: center; justify-content: center;
           font-weight: 700; font-size: 15px; flex-shrink: 0;

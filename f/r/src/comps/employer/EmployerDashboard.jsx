@@ -9,6 +9,7 @@ import ManageServices    from './ManageServices';
 import ManageProducts    from './ManageProducts';
 import ServiceRequests   from './ServiceRequests';
 import InterviewResult from './InterviewResult';
+import ServiceMarketplace from './ServiceMarketplace';
 
 const API = 'http://localhost:5000';
 
@@ -100,14 +101,15 @@ const EmployerDashboard = ({ user, onLogout }) => {
 
   const TAB_TITLES = {
     dashboard:        ' Dashboard',
-    profile:          '🏢 Company Profile',
-    'post-job':       '📝 Post New Job',
-    'manage-jobs':    '📋 Manage Jobs',
-    'job-applicants': '👥 Job Applicants',
-    'all-applicants': '👥 All Applicants',
-    services:         '🔧 Services',
-    products:         '📦 Products',
-    'service-requests': 'Service Requests'
+    profile:          ' Company Profile',
+    'post-job':       ' Post New Job',
+    'manage-jobs':    ' Manage Jobs',
+    'job-applicants': ' Job Applicants',
+    'all-applicants': ' All Applicants',
+    services:         ' Manage Services',
+    products:         ' Manage Products',
+    'service-requests': 'Service Requests',
+    'marketplace': 'Marketplace',
   };
 
   return (
@@ -193,7 +195,7 @@ const EmployerDashboard = ({ user, onLogout }) => {
                 {[
                   { c:'purple', bg:'#EEF2FF', color:'#ca188c', val:stats.activeJobs,     lbl:'Active Jobs',      tab:'manage-jobs'    },
                   { c:'blue',   bg:'#EFF6FF', color:'#4facfe', val:stats.totalApplicants, lbl:'Total Applicants', tab:'all-applicants' },
-                  { c:'green',  bg:'#ECFDF5', color:'#43e97b', val:stats.servicesOffered, lbl:'Services',         tab:'services'       },
+                  { c:'green',  bg:'#ECFDF5', color:'#2c974f', val:stats.servicesOffered, lbl:'Services',         tab:'services'       },
                   { c:'orange', bg:'#FFF0F6', color:'#fa709a', val:stats.productsListed,  lbl:'Products',         tab:'products'       }
                 ].map(s => (
                   <div key={s.tab} className={`stat-card ${s.c}`} onClick={() => setActiveTab(s.tab)}>
@@ -262,7 +264,7 @@ const EmployerDashboard = ({ user, onLogout }) => {
           {activeTab === 'services'  && <ManageServices user={user} />}
           {activeTab === 'products'  && <ManageProducts user={user} />}
           {activeTab === 'service-requests' && <ServiceRequests user={user} />}
-
+          {activeTab === 'marketplace' && <ServiceMarketplace user={user} />}
           {activeTab === 'interview-result' && (
             <InterviewResult 
               applicationId={selectedInterviewId}
@@ -270,7 +272,6 @@ const EmployerDashboard = ({ user, onLogout }) => {
             />
           )}
 
-          // Update AllApplicants call to include onViewInterview
           {activeTab === 'all-applicants' && (
             <AllApplicants 
               user={user} 
@@ -283,7 +284,7 @@ const EmployerDashboard = ({ user, onLogout }) => {
 
       <style>{`
         .emp-layout {
-          display: flex; min-height: 100vh; background: #F3F4F6;
+          display: flex; min-height: 100vh; background: #a0d3ec;
         }
         .emp-content {
           flex: 1; margin-left: 250px; min-width: 0;
@@ -293,12 +294,12 @@ const EmployerDashboard = ({ user, onLogout }) => {
         /* ── Top bar ── */
         .topbar {
           position: sticky; top: 0; z-index: 50;
-          background: white; border-bottom: 1px solid #E5E7EB;
+          background: white; border-bottom: 1px solid #215bd0;
           height: 62px; padding: 0 28px;
           display: flex; align-items: center; justify-content: space-between;
           box-shadow: 0 1px 4px rgba(0,0,0,0.05);
         }
-        .topbar-title { font-size: 16px; font-weight: 600; color: #111827; }
+        .topbar-title { font-size: 18px; font-weight: 600; color: #0a2050; }
         .topbar-right  { display: flex; align-items: center; gap: 14px; }
         .company-label {
           font-size: 14px; font-weight: 500; color: #374151;
@@ -365,7 +366,7 @@ const EmployerDashboard = ({ user, onLogout }) => {
         /* ── Page body ── */
         .page-body { flex: 1; padding: 28px 30px; }
         .page-body h1 { font-size: 26px; color: #111827; margin: 0 0 4px; }
-        .subtitle { color: #6B7280; margin: 0 0 26px; font-size: 14px; }
+        .subtitle { color: #5d83c6; margin: 0 0 26px; font-size: 20px; }
 
         /* Stats */
         .stats-grid {
@@ -379,16 +380,16 @@ const EmployerDashboard = ({ user, onLogout }) => {
           cursor: pointer; transition: transform .2s, box-shadow .2s;
         }
         .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.09); }
-        .sicon { font-size: 36px; }
+        .sicon { font-size: 38px; }
         .stat-card h3 { font-size:26px; color:#111827; margin:0 0 2px; }
         .stat-card p  { color:#6B7280; font-size:13px; margin:0; }
         .stat-card.purple { border-left: 4px solid #c111bb; }
         .stat-card.blue   { border-left: 4px solid #4facfe; }
-        .stat-card.green  { border-left: 4px solid #43e97b; }
+        .stat-card.green  { border-left: 4px solid #3e834f; }
         .stat-card.orange { border-left: 4px solid #fa709a; }
 
         .stat-num-box {
-          width: 56px; height: 56px; border-radius: 14px;
+          width: 56px; height: 56px; border-radius: 18px;
           display: flex; align-items: center; justify-content: center;
           font-size: 24px; font-weight: 700; flex-shrink: 0;
         }
@@ -403,7 +404,7 @@ const EmployerDashboard = ({ user, onLogout }) => {
         .company-desc-box p  { font-size: 14px; color: #6B7280; margin: 0; line-height: 1.6; }
 
         /* Quick actions */
-        .qa-box h2 { margin: 0 0 14px; color: #111827; font-size: 17px; }
+        .qa-box h2 { margin: 0 0 14px; color: #14203c; font-size: 20px; }
         .qa-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
         .qa-btn {
           background: white; border: none; padding: 18px 12px;

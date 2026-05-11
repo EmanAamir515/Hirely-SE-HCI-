@@ -9,6 +9,7 @@ const menuItems = [
   { id: 'services',       label: 'Services'        },
   { id: 'products',       label: 'Products'        },
   { id: 'service-requests', label: 'Service Requests' },
+  { id: 'marketplace', label: 'Marketplace' },
 ];
 
 const EmployerSidebar = ({ activeTab, setActiveTab, user, onLogout, companyLogo }) => {
@@ -68,7 +69,7 @@ const EmployerSidebar = ({ activeTab, setActiveTab, user, onLogout, companyLogo 
           position: fixed;
           top: 0; left: 0;
           width: 250px; height: 100vh;
-          background: linear-gradient(160deg, #667eea );
+          background: linear-gradient(160deg, #2b3f98 );
           color: white;
           display: flex; flex-direction: column;
           overflow: hidden;

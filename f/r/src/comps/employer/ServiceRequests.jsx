@@ -53,8 +53,8 @@ const ServiceRequests = ({ user }) => {
   const getStatusStyle = (status) => {
     const map = {
       pending:   { bg: '#FEF3C7', color: '#92400E' },
-      accepted:  { bg: '#D1FAE5', color: '#065F46' },
-      rejected:  { bg: '#FEE2E2', color: '#991B1B'},
+      accepted:  { bg: '#D1FAE5', color: '#1e9170' },
+      rejected:  { bg: '#FEE2E2', color: '#c31c1c'},
       completed: { bg: '#DBEAFE', color: '#1D4ED8' },
     };
     return map[status?.toLowerCase()] || map.pending;
@@ -79,7 +79,7 @@ const ServiceRequests = ({ user }) => {
           <p>Manage incoming requests from users</p>
         </div>
         {pendingCount > 0 && (
-          <span className="sr-badge">🔔 {pendingCount} Pending</span>
+          <span className="sr-badge">{pendingCount} Pending</span>
         )}
       </div>
 
@@ -107,7 +107,6 @@ const ServiceRequests = ({ user }) => {
         </div>
       ) : visible.length === 0 ? (
         <div className="sr-empty">
-          <span>📭</span>
           <p>No {filterType === 'all' ? '' : filterType} requests yet</p>
         </div>
       ) : (
@@ -153,7 +152,7 @@ const ServiceRequests = ({ user }) => {
 
                   {req.Message && (
                     <div className="sr-message">
-                      💬 "{req.Message}"
+                      "{req.Message}"
                     </div>
                   )}
 
@@ -171,14 +170,14 @@ const ServiceRequests = ({ user }) => {
                         onClick={() => handleAction(req.RequestID, 'accept')}
                         disabled={actionLoading === req.RequestID}
                       >
-                        {actionLoading === req.RequestID ? '⏳...' : '✅ Accept'}
+                        {actionLoading === req.RequestID ? '...' : ' Accept'}
                       </button>
                       <button
                         className="sr-reject-btn"
                         onClick={() => handleAction(req.RequestID, 'reject')}
                         disabled={actionLoading === req.RequestID}
                       >
-                        {actionLoading === req.RequestID ? '⏳...' : '❌ Decline'}
+                        {actionLoading === req.RequestID ? '...' : 'Decline'}
                       </button>
                     </div>
                   )}
@@ -190,7 +189,7 @@ const ServiceRequests = ({ user }) => {
                         onClick={() => handleAction(req.RequestID, 'complete')}
                         disabled={actionLoading === req.RequestID}
                       >
-                        {actionLoading === req.RequestID ? '⏳...' : ' Mark Completed'}
+                        {actionLoading === req.RequestID ? '...' : ' Mark Completed'}
                       </button>
                     </div>
                   )}
@@ -206,7 +205,7 @@ const ServiceRequests = ({ user }) => {
         .sr-header { display: flex; align-items: center; justify-content: space-between; }
         .sr-header h2 { font-size: 24px; font-weight: 700; color: #0F172A; margin: 0 0 4px; }
         .sr-header p  { color: #64748B; margin: 0; font-size: 14px; }
-        .sr-badge { background: #FEF3C7; color: #92400E; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+        .sr-badge { background: #FEF3C7; color: #92400E; padding: 8px 16px; border-radius: 10px; font-size: 18px; font-weight: 600; }
 
         /* Tabs */
         .sr-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -242,7 +241,7 @@ const ServiceRequests = ({ user }) => {
 
         .sr-avatar {
           width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #7727c7);
           display: flex; align-items: center; justify-content: center;
           color: #fff; font-weight: 700; font-size: 18px;
         }
@@ -273,7 +272,7 @@ const ServiceRequests = ({ user }) => {
           font-size: 13px; font-weight: 600; cursor: pointer;
           border: none; transition: all 0.2s;
         }
-        .sr-accept-btn   { background: #059669; color: #fff; }
+        .sr-accept-btn   { background: #41de8a; color: #0b381c; }
         .sr-accept-btn:hover:not(:disabled)   { background: #047857; }
         .sr-reject-btn   { background: #FEE2E2; color: #991B1B; }
         .sr-reject-btn:hover:not(:disabled)   { background: #FECACA; }

@@ -68,7 +68,6 @@ const PostJob = ({ user, onJobPosted }) => {
           <input
             type="text" name="title" value={formData.title}
             onChange={handleChange} required
-            placeholder="e.g., Senior Frontend Developer"
           />
         </div>
         
@@ -77,7 +76,7 @@ const PostJob = ({ user, onJobPosted }) => {
           <textarea
             name="description" value={formData.description}
             onChange={handleChange} required rows="5"
-            placeholder="Describe the role, responsibilities, and requirements..."
+            placeholder="Describe its role, responsibilities, and requirements..."
           />
         </div>
         
@@ -86,7 +85,7 @@ const PostJob = ({ user, onJobPosted }) => {
           <input
             type="text" name="requiredSkills"
             value={formData.requiredSkills} onChange={handleChange}
-            placeholder="e.g., React, Node.js, SQL"
+            placeholder="e.g: React, Node.js, SQL"
           />
         </div>
         
@@ -94,8 +93,8 @@ const PostJob = ({ user, onJobPosted }) => {
           <div className="form-group">
             <label>Experience Level</label>
             <select name="experienceLevel" value={formData.experienceLevel} onChange={handleChange}>
-              <option>Entry Level</option>
-              <option>Mid Level</option>
+              <option>Entry Level (Beginner)</option>
+              <option>Mid Level (1-2 years experience)</option>
               <option>Senior Level</option>
               <option>Lead</option>
               <option>Manager</option>
@@ -197,7 +196,7 @@ const PostJob = ({ user, onJobPosted }) => {
         }
         
         .submit-btn {
-          background: linear-gradient(135deg, #667eea);
+          background: linear-gradient(135deg, #1d2b6e);
           color: white; border: none;
           padding: 14px 40px; border-radius: 8px;
           font-size: 16px; cursor: pointer;

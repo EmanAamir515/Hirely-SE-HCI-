@@ -104,7 +104,7 @@ const CandidateProfile = ({ user }) => {
 
   if (loading) return <div className="cp-loading">Loading profile…</div>;
 
-  const completionColor = completion >= 80 ? '#10B981' : completion >= 50 ? '#F59E0B' : '#667eea';
+  const completionColor = completion >= 80 ? '#1810b9' : completion >= 50 ? '#a7c01a' : '#667eea';
 
   return (
     <div className="cp-root">

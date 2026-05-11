@@ -125,7 +125,7 @@ const AllApplicants = ({ user, onViewJobApplicants, onViewInterview }) => {
     <div className="all-applicants-page">
       <div className="page-header">
         <h1>All Applicants</h1>
-        <p className="subtitle">View and manage every application across all your jobs</p>
+        <p className="subtitle">View and manage every application for all your jobs</p>
       </div>
 
       {/* Stats */}
@@ -165,10 +165,11 @@ const AllApplicants = ({ user, onViewJobApplicants, onViewInterview }) => {
           className="filter-select"
         >
           <option value="All">All Status</option>
-          <option value="Pending">⏳ Pending</option>
+          <option value="Pending"> Pending</option>
           <option value="Shortlisted"> Shortlisted</option>
           <option value="Interview"> Interview</option>
           <option value="Accepted"> Accepted</option>
+          <option value="Interviewed">Interview Done</option>
           <option value="Rejected">❌ Rejected</option>
         </select>
       </div>
@@ -230,7 +231,7 @@ const AllApplicants = ({ user, onViewJobApplicants, onViewInterview }) => {
                           border: `1.5px solid ${statusStyle.text}30`
                         }}
                       >
-                        <option value="Pending">⏳ Pending</option>
+                        <option value="Pending">Pending</option>
                         <option value="Shortlisted"> Shortlisted</option>
                         <option value="Interview"> Interview</option>
                         <option value="Accepted"> Accepted</option>
@@ -243,16 +244,18 @@ const AllApplicants = ({ user, onViewJobApplicants, onViewInterview }) => {
     onClick={() => onViewJobApplicants && onViewJobApplicants(app.JobID)}
     title="See all applicants for this job"
   >
-    👁 View Job
+     View Job
   </button>
-  <button
-    className="view-btn"
-    style={{ marginLeft: 8, background: '#F0FDF4', color: '#166534' }}
-    onClick={() => onViewInterview && onViewInterview(app.ApplicationID)}
-    title="View interview result"
-  >
-    🎙️ Interview
-  </button>
+  {app.Status === 'Interviewed' && (
+    <button
+      className="view-btn"
+      style={{ marginLeft: 8, background: '#F0FDF4', color: '#166534' }}
+      onClick={() => onViewInterview && onViewInterview(app.ApplicationID)}
+      title="View interview result"
+    >
+      Interview Result
+    </button>
+  )}
 </td>
                   </tr>
                 );
@@ -376,7 +379,7 @@ const AllApplicants = ({ user, onViewJobApplicants, onViewInterview }) => {
           width: 38px;
           height: 38px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #667eea);
+          background: linear-gradient(135deg, #713ad8);
           color: white;
           font-weight: 700;
           font-size: 15px;

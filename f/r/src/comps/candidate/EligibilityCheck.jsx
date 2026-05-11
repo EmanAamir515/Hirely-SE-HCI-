@@ -52,7 +52,7 @@ const EligibilityCheck = ({ user }) => {
       {/* Header */}
       <div className="ec-header">
         <h2>Hirely Eligibility Check</h2>
-        <p>NLP-powered skill matching — checks synonyms, fuzzy matches, and stem variants</p>
+        <p>NLP-powered skill matching — checks synonyms</p>
       </div>
 
       {/* Selector */}
@@ -81,7 +81,7 @@ const EligibilityCheck = ({ user }) => {
             onClick={handleCheck}
             disabled={!selectedJobId || checking}
           >
-            {checking ? '⏳ Analyzing…' : '🔎 Check Eligibility'}
+            {checking ? ' Analyzing…' : ' Check Eligibility'}
           </button>
         </div>
 
@@ -274,8 +274,8 @@ const EligibilityCheck = ({ user }) => {
         .ec-select-wrap select:focus { outline: none; border-color: #667eea; }
         .ec-check-btn {
           padding: 11px 28px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: #fff; border: none; border-radius: 8px;
+          background: linear-gradient(115deg, #441f9b);
+          color: #fff; border: none; border-radius: 6px;
           font-size: 14px; font-weight: 600; cursor: pointer;
           transition: opacity 0.2s; white-space: nowrap;
         }

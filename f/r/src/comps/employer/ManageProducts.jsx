@@ -208,7 +208,7 @@ const ManageProducts = ({ user }) => {
         .subtitle { color: #6B7280; margin: 0; font-size: 15px; }
         
         .add-btn {
-          background: linear-gradient(135deg, #667eea );
+          background: linear-gradient(135deg, #713ad8 );
           color: white; border: none; padding: 12px 24px;
           border-radius: 10px; cursor: pointer; font-size: 14px;
           font-weight: 500; transition: all 0.3s;
@@ -301,7 +301,7 @@ const ManageProducts = ({ user }) => {
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         
         .save-btn {
-          background: #667eea; color: white; border: none;
+          background: #713ad8; color: white; border: none;
           padding: 12px 24px; border-radius: 8px; cursor: pointer;
           width: 100%; font-size: 14px; font-weight: 500;
         }
@@ -358,7 +358,7 @@ const ManageProducts = ({ user }) => {
 
         .price-tag {
           font-weight: 600;
-          color: #059669;
+          color: #1c75a4;
           font-size: 14px;
         }
 
@@ -370,8 +370,8 @@ const ManageProducts = ({ user }) => {
         }
 
         .stock-badge.in-stock {
-          background: #D1FAE5;
-          color: #065F46;
+          background: #abccdd;
+          color: #225e7f;
         }
 
         .stock-badge.out-of-stock {

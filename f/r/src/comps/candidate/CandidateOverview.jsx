@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 const CandidateOverview = ({ user, onNavigate }) => {
-  const [stats, setStats] = useState({ applicationsSent: 0, profileViews: 0, interviewsScheduled: 0, jobMatches: 0, profileCompletion: 20 });
+  const [stats, setStats] = useState({ applicationsSent: 0,  interviewsScheduled: 0, profileCompletion: 20 });
   const [recentApps, setRecentApps] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,9 +37,7 @@ const CandidateOverview = ({ user, onNavigate }) => {
 
   const statCards = [
     { label: 'Applications Sent',    value: stats.applicationsSent,     color: '#6366F1', bg: '#EEF2FF', nav: 'applications' },
-    { label: 'Profile Views',        value: stats.profileViews,         color: '#10B981', bg: '#ECFDF5', nav: 'profile'      },
-    { label: 'Interviews Scheduled', value: stats.interviewsScheduled,  color: '#F59E0B', bg: '#FFFBEB', nav: 'applications' },
-    { label: 'Job Matches',          value: stats.jobMatches,           color: '#3B82F6', bg: '#EFF6FF', nav: 'findJobs'     },
+    { label: 'Interviews Scheduled', value: stats.interviewsScheduled,  color: '#1b823f', bg: '#dbede0c8', nav: 'applications' },
   ];
 
   const completionPct = stats.profileCompletion;
@@ -55,7 +53,7 @@ const CandidateOverview = ({ user, onNavigate }) => {
       <div className="ov-welcome">
         <div>
           <h1>Welcome, {(user?.name || 'User').split(' ')[0]}! </h1>
-          <p>Here's your job search progress and recommendations</p>
+          <p>Let's find work </p>
         </div>
         <button className="ov-browse-btn" onClick={() => onNavigate('findJobs')}>
           🔍 Browse Jobs
@@ -140,23 +138,7 @@ const CandidateOverview = ({ user, onNavigate }) => {
         )}
       </div>
 
-      {/* Quick Actions */}
-      <div className="ov-section">
-        <h3>Quick Actions</h3>
-        <div className="ov-qa-grid">
-          {[
-            { label: 'Post New Application', icon: '📝', nav: 'findJobs' },
-            { label: 'Check Eligibility',    icon: '✅', nav: 'eligibility' },
-            { label: 'Update Profile',       icon: '👤', nav: 'profile' },
-            { label: 'Browse Marketplace',   icon: '🛍️', nav: 'marketplace' },
-          ].map(qa => (
-            <button key={qa.label} className="ov-qa-btn" onClick={() => onNavigate(qa.nav)}>
-              <span>{qa.icon}</span>
-              <span>{qa.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      
 
       <style>{`
         .ov-root { display: flex; flex-direction: column; gap: 20px; }
@@ -169,7 +151,7 @@ const CandidateOverview = ({ user, onNavigate }) => {
         .ov-welcome p  { color: #64748B; margin: 0; font-size: 14px; }
         .ov-browse-btn {
           padding: 10px 22px;
-          background: linear-gradient(135deg, #667eea);
+          background: linear-gradient(135deg, #7121b8ec);
           color: #fff; border: none; border-radius: 8px;
           font-size: 14px; font-weight: 600; cursor: pointer;
           transition: opacity 0.2s; white-space: nowrap;
@@ -203,8 +185,8 @@ const CandidateOverview = ({ user, onNavigate }) => {
           font-size: 13px; font-weight: 500; cursor: pointer;
           transition: all 0.15s;
         }
-        .ov-comp-action:hover:not(.done) { background: #EEF2FF; color: #4338CA; border-color: #C7D2FE; }
-        .ov-comp-action.done { background: #ECFDF5; color: #059669; border-color: #A7F3D0; cursor: default; }
+        .ov-comp-action:hover:not(.done) { background: #42d3e0; color: #4338CA; border-color: #C7D2FE; }
+        .ov-comp-action.done { background: #c3ecf5; color: #7121b8ec; border-color: #49bdda; cursor: default; }
 
         /* Stats */
         .ov-stats-grid {
@@ -251,7 +233,7 @@ const CandidateOverview = ({ user, onNavigate }) => {
         .ov-app-row:hover { background: #F1F5F9; }
         .ov-app-logo {
           width: 40px; height: 40px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #6522a9);
           border-radius: 10px;
           display: flex; align-items: center; justify-content: center;
           color: #fff; font-weight: 700; font-size: 16px; flex-shrink: 0;
@@ -264,22 +246,7 @@ const CandidateOverview = ({ user, onNavigate }) => {
           padding: 4px 12px; border-radius: 20px;
           font-size: 12px; font-weight: 600; white-space: nowrap;
         }
-
-        /* Quick Actions */
-        .ov-qa-grid {
-          display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-        }
-        .ov-qa-btn {
-          display: flex; flex-direction: column; align-items: center; gap: 8px;
-          padding: 18px 12px;
-          background: #F8FAFC; border: 2px solid #E2E8F0;
-          border-radius: 10px; cursor: pointer;
-          font-size: 13px; color: #475569; font-weight: 500;
-          transition: all 0.2s;
-        }
-        .ov-qa-btn:hover { background: #EEF2FF; border-color: #667eea; color: #4338CA; }
-        .ov-qa-btn span:first-child { font-size: 24px; }
-
+        
         @media (max-width: 1100px) { .ov-stats-grid { grid-template-columns: repeat(2, 1fr); } .ov-qa-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 600px) { .ov-stats-grid { grid-template-columns: 1fr; } .ov-qa-grid { grid-template-columns: 1fr 1fr; } }
       `}</style>

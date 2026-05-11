@@ -290,7 +290,7 @@ const FindJobs = ({ user }) => {
         }
         .fj-company-logo {
           width: 46px; height: 46px; border-radius: 12px;
-          background: linear-gradient(135deg, #667eea);
+          background: linear-gradient(135deg, #4719b4);
           display: flex; align-items: center; justify-content: center;
           color: #fff; font-weight: 700; font-size: 18px; flex-shrink: 0;
         }
@@ -307,15 +307,15 @@ const FindJobs = ({ user }) => {
           margin-bottom: 12px; padding-bottom: 12px;
           border-bottom: 1px solid #F1F5F9;
         }
-        .fj-meta span { font-size: 13px; color: #64748B; }
+        .fj-meta span { font-size: 15px; color: #0c0e11; }
 
         .fj-desc { font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 12px; }
 
-        .fj-skills strong { font-size: 13px; color: #374151; display: block; margin-bottom: 8px; }
+        .fj-skills strong { font-size: 15px; color: #374151; display: block; margin-bottom: 8px; }
         .fj-skill-list    { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
         .fj-skill-tag {
-          padding: 4px 12px; background: #F1F5F9; color: #475569;
-          border-radius: 20px; font-size: 12px; font-weight: 500;
+          padding: 4px 12px; background: #F1F5F9; color: #1b1e22;
+          border-radius: 10px; font-size: 14px; font-weight: 500;
         }
 
         .fj-apply-msg {

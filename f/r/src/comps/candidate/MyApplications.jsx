@@ -4,6 +4,7 @@ const MyApplications = ({ user, onStartInterview }) => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  const [search, setSearch] = useState('');
 
   useEffect(() => { fetchApplications(); }, []);
 
@@ -28,8 +29,12 @@ const MyApplications = ({ user, onStartInterview }) => {
   };
 
   const filterOptions = ['All', 'Pending', 'Shortlisted', 'Interview', 'Interviewed', 'Accepted', 'Rejected'];
-  const filtered = filter === 'All' ? applications : applications.filter(a => a.Status === filter);
-
+  const filtered = applications.filter(a => {
+    const matchStatus = filter === 'All' || a.Status === filter;
+    const q = search.toLowerCase();
+    const matchSearch = !q || a.Title?.toLowerCase().includes(q) || a.CompanyName?.toLowerCase().includes(q);
+    return matchStatus && matchSearch;
+  });
   const statusCounts = filterOptions.slice(1).reduce((acc, s) => {
     acc[s] = applications.filter(a => a.Status === s).length;
     return acc;
@@ -88,20 +93,20 @@ const MyApplications = ({ user, onStartInterview }) => {
         })}
       </div>
 
-      {/* Filter tabs */}
-      <div className="ma-filter-row">
-        {filterOptions.map(f => (
-          <button
-            key={f}
-            className={`ma-filter-tab ${filter === f ? 'active' : ''}`}
-            onClick={() => setFilter(f)}
-          >
-            {f}
-            {f !== 'All' && statusCounts[f] > 0 && (
-              <span className="ma-tab-count">{statusCounts[f]}</span>
-            )}
-          </button>
-        ))}
+      {/* Search bar */}
+      <div className="ma-search-bar">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+          <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
+            stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by job title or company name…"
+        />
+        {search && (
+          <button className="ma-search-clear" onClick={() => setSearch('')}>✕</button>
+        )}
       </div>
 
       {/* Applications List */}
@@ -112,7 +117,7 @@ const MyApplications = ({ user, onStartInterview }) => {
       ) : filtered.length === 0 ? (
         <div className="ma-empty">
           <span>📭</span>
-          <p>{filter === 'All' ? "You haven't applied to any jobs yet." : `No ${filter.toLowerCase()} applications.`}</p>
+            <p>{search ? `No results for "${search}".` : filter === 'All' ? "You haven't applied to any jobs yet." : `No ${filter.toLowerCase()} applications.`}</p>
         </div>
       ) : (
         <div className="ma-list">
@@ -140,8 +145,8 @@ const MyApplications = ({ user, onStartInterview }) => {
                     </span>
                   </div>
                   <div className="ma-meta">
-                    <span>🏢 {app.CompanyName}</span>
-                    <span>📋 {app.JobType}</span>
+                    <span> {app.CompanyName}</span>
+                    <span> {app.JobType}</span>
                     <span>🕒 Applied {getDaysAgo(app.AppliedDate)}</span>
                   </div>
                   {app.CoverNote && (
@@ -220,7 +225,7 @@ const MyApplications = ({ user, onStartInterview }) => {
           display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
         }
         .ma-summary-card {
-          background: #fff; border-radius: 12px;
+          background: #fff; border-radius: 8px;
           padding: 14px 12px; display: flex; align-items: center; gap: 10px;
           box-shadow: 0 1px 4px rgba(0,0,0,0.06);
           cursor: pointer; transition: all 0.15s;
@@ -232,21 +237,24 @@ const MyApplications = ({ user, onStartInterview }) => {
         .ma-sum-count { font-size: 20px; font-weight: 700; line-height: 1.2; }
         .ma-sum-label { font-size: 11px; color: #64748B; }
 
-        /* Filters */
-        .ma-filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
-        .ma-filter-tab {
-          padding: 7px 14px; border-radius: 20px;
-          border: 1.5px solid #E2E8F0;
-          background: #F8FAFC; color: #475569;
-          font-size: 13px; font-weight: 500; cursor: pointer;
-          transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+        /* Search bar */
+        .ma-search-bar {
+          display: flex; align-items: center; gap: 10px;
+          background: #fff; border: 1.5px solid #E2E8F0;
+          border-radius: 10px; padding: 0 14px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+          transition: border-color 0.15s;
         }
-        .ma-filter-tab:hover  { border-color: #667eea; color: #4338CA; }
-        .ma-filter-tab.active { background: #EEF2FF; color: #4338CA; border-color: #C7D2FE; font-weight: 600; }
-        .ma-tab-count {
-          background: #E0E7FF; color: #4338CA;
-          border-radius: 10px; padding: 1px 6px; font-size: 11px; font-weight: 700;
+        .ma-search-bar:focus-within { border-color: #667eea; }
+        .ma-search-bar input {
+          flex: 1; padding: 11px 0; border: none; background: transparent;
+          font-size: 14px; color: #1E293B; font-family: inherit; outline: none;
         }
+        .ma-search-clear {
+          background: none; border: none; cursor: pointer;
+          color: #94A3B8; font-size: 13px; padding: 4px; transition: color 0.15s;
+        }
+        .ma-search-clear:hover { color: #475569; }
 
         /* Loading / Empty */
         .ma-loading { display: flex; flex-direction: column; gap: 12px; }
@@ -274,7 +282,7 @@ const MyApplications = ({ user, onStartInterview }) => {
 
         .ma-logo {
           width: 46px; height: 46px; border-radius: 12px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #6522a9);
           display: flex; align-items: center; justify-content: center;
           color: #fff; font-weight: 700; font-size: 18px; flex-shrink: 0;
         }

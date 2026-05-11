@@ -64,13 +64,13 @@ const EmployerProfile = ({ user, companyData, onUpdate, onLogoChange }) => {
         const fullUrl = `${API}${data.logoUrl}`;
         setLogoPreview(fullUrl);
         if (onLogoChange) onLogoChange(fullUrl);
-        setMessage('✅ Logo uploaded and saved!');
+        setMessage(' Logo uploaded and saved!');
         if (onUpdate) onUpdate();          // refresh companyData stats
       } else {
         setMessage('❌ ' + data.message);
       }
     } catch {
-      setMessage('❌ Upload failed. Is the server running?');
+      setMessage(' Upload failed. Is the server running?');
     } finally {
       setUploading(false);
     }
@@ -114,7 +114,7 @@ const EmployerProfile = ({ user, companyData, onUpdate, onLogoChange }) => {
   return (
     <div className="profile-page">
       <h1>Company Profile</h1>
-      <p className="subtitle">Manage your company information visible to candidates</p>
+      <p className="subtitle">Edit your company information </p>
 
       {message && (
         <div className={`msg ${isSuccess ? 'msg-ok' : 'msg-err'}`}>{message}</div>
@@ -135,7 +135,6 @@ const EmployerProfile = ({ user, companyData, onUpdate, onLogoChange }) => {
           <div className="logo-meta">
             <p className="logo-title">Company Logo</p>
             <p className="logo-hint">
-              Saved to <code>b/public/uploads/logos/</code> and stored in your database.<br/>
               PNG · JPG · WEBP · max 2 MB
             </p>
           </div>

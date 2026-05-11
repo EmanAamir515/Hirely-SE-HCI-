@@ -44,15 +44,18 @@ const InterviewResult = ({ applicationId, candidateName, onBack }) => {
   const { summary, qa } = data;
   const hired = summary.Hired === true || summary.Hired === 1;
 
-  const ScoreBar = ({ label, value, color }) => (
-    <div className="ir-score-row">
-      <div className="ir-score-label">{label}</div>
-      <div className="ir-score-track">
-        <div className="ir-score-fill" style={{ width: `${value}%`, background: color }} />
+  const ScoreBar = ({ label, value, color }) => {
+    const v = (value != null && !isNaN(value)) ? value : 0;
+    return (
+      <div className="ir-score-row">
+        <div className="ir-score-label">{label}</div>
+        <div className="ir-score-track">
+          <div className="ir-score-fill" style={{ width: `${v}%`, background: color }} />
+        </div>
+        <div className="ir-score-val">{Math.round(v)}/100</div>
       </div>
-      <div className="ir-score-val">{Math.round(value)}/100</div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="ir-wrap">
@@ -101,25 +104,27 @@ const InterviewResult = ({ applicationId, candidateName, onBack }) => {
           <div key={item.QAid || i} className="ir-qa-item">
             <div className="ir-qa-top">
               <span className="ir-qa-num">Q{i + 1}</span>
-              <p className="ir-qa-question">{item.Question}</p>
+              <p className="ir-qa-question">{item.question}</p>
             </div>
             <div className="ir-qa-answer">
               <span className="ir-qa-answer-label">Answer</span>
-              <p>{item.Answer}</p>
+              <p>{item.answer || <em style={{color:'#9CA3AF'}}>No answer recorded</em>}</p>
             </div>
             <div className="ir-qa-scores">
               <div className="ir-qa-score-chip blue">
-                Quality: {Math.round(item.QualityScore)}/100
+                Quality: {Math.round(item.qualityScore ?? 0)}/100
               </div>
-              <div className="ir-qa-score-chip green">
-                Skill: {Math.round(item.SkillScore)}/100
-              </div>
+              {item.type !== 'personality' && (
+                <div className="ir-qa-score-chip green">
+                  Skill: {Math.round(item.skillScore ?? 0)}/100
+                </div>
+              )}
               <div className={`ir-qa-feedback-chip ${
-                item.SkillScore >= 85 ? 'excellent'
-                : item.SkillScore >= 65 ? 'good'
-                : item.SkillScore >= 40 ? 'average' : 'weak'
+                (item.skillScore ?? item.qualityScore ?? 0) >= 85 ? 'excellent'
+                : (item.skillScore ?? item.qualityScore ?? 0) >= 65 ? 'good'
+                : (item.skillScore ?? item.qualityScore ?? 0) >= 40 ? 'average' : 'weak'
               }`}>
-                {item.Feedback}
+                {item.feedback}
               </div>
             </div>
           </div>
