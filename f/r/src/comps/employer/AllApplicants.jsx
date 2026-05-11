@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { sendNotification } from './notifyHelperE';
 
 // Props:
 //   user               – current logged-in user
 //   onViewJobApplicants(jobId) – called when "View Job" is clicked; parent switches to job-applicants tab
-const AllApplicants = ({ user, onViewJobApplicants }) => {
+const AllApplicants = ({ user, onViewJobApplicants, onViewInterview }) => {
   const [applicants, setApplicants] = useState([]);
   const [filteredApplicants, setFilteredApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +57,15 @@ const AllApplicants = ({ user, onViewJobApplicants }) => {
   };
 
   const updateStatus = async (applicationId, newStatus) => {
+    // Optimistically update UI
+    const applicant = applicants.find(a => a.ApplicationID === applicationId);
+    setApplicants(prev =>
+      prev.map(a => a.ApplicationID === applicationId ? { ...a, Status: newStatus } : a)
+    );
+    setFilteredApplicants(prev =>
+      prev.map(a => a.ApplicationID === applicationId ? { ...a, Status: newStatus } : a)
+    );
+
     try {
       const token = localStorage.getItem('token');
       await fetch('http://localhost:5000/api/applications/status', {
@@ -66,9 +76,30 @@ const AllApplicants = ({ user, onViewJobApplicants }) => {
         },
         body: JSON.stringify({ applicationId, status: newStatus })
       });
+
+      // ── Notify the candidate ─────────────────────────────────────────────
+      // Your GET /api/applicants/all should include CandidateUserID (the UserId
+      // of the candidate account). Add it to the query if it's missing.
+      const candidateUserId = applicant?.CandidateUserID ?? applicant?.CandidateID;
+      if (candidateUserId) {
+        const jobTitle = applicant?.JobTitle || 'a position';
+        const candidateName = applicant?.CandidateName || 'there';
+        const statusMessages = {
+          Shortlisted: `🌟 Great news! Your application for "${jobTitle}" has been shortlisted.`,
+          Interview:   `🎙️ You've been selected for an AI Interview for "${jobTitle}". Log in to take it now!`,
+          Accepted:    `🎉 Congratulations! Your application for "${jobTitle}" has been accepted!`,
+          Rejected:    `Thank you for applying to "${jobTitle}". Unfortunately, you were not selected this time.`,
+          Pending:     `Your application for "${jobTitle}" status has been updated to Pending.`,
+        };
+        const msg = statusMessages[newStatus] || `Your application status changed to: ${newStatus}`;
+        await sendNotification(token, candidateUserId, msg);
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       fetchAllApplicants();
     } catch (error) {
       console.error('Error updating status:', error);
+      fetchAllApplicants(); // revert on error
     }
   };
 
@@ -207,15 +238,22 @@ const AllApplicants = ({ user, onViewJobApplicants }) => {
                       </select>
                     </td>
                     <td>
-                      {/* ← FIXED: calls onViewJobApplicants (matched to EmployerDashboard prop) */}
-                      <button
-                        className="view-btn"
-                        onClick={() => onViewJobApplicants && onViewJobApplicants(app.JobID)}
-                        title="See all applicants for this job"
-                      >
-                        👁 View Job
-                      </button>
-                    </td>
+  <button
+    className="view-btn"
+    onClick={() => onViewJobApplicants && onViewJobApplicants(app.JobID)}
+    title="See all applicants for this job"
+  >
+    👁 View Job
+  </button>
+  <button
+    className="view-btn"
+    style={{ marginLeft: 8, background: '#F0FDF4', color: '#166534' }}
+    onClick={() => onViewInterview && onViewInterview(app.ApplicationID)}
+    title="View interview result"
+  >
+    🎙️ Interview
+  </button>
+</td>
                   </tr>
                 );
               })

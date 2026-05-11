@@ -24,6 +24,7 @@ import {
   acceptServiceRequest, rejectServiceRequest, completeServiceRequest,
   getNotifications, markAllNotificationsRead,
   createNotification,
+  getInterviewStatus, getInterviewResult, saveInterviewResult,
 } from './routes.js';
 
 dotenv.config();
@@ -104,6 +105,10 @@ app.get('/api/notifications',          verifyToken, getNotifications);
 app.post('/api/notifications',         verifyToken, createNotification);  // ← ADD THIS LINE
 app.put('/api/notifications/read-all', verifyToken, markAllNotificationsRead);
 
+
+app.get('/api/interview/status/:applicationId', verifyToken, getInterviewStatus);
+app.get('/api/interview/result/:applicationId', verifyToken, getInterviewResult);
+app.post('/api/interview/result', verifyToken, saveInterviewResult);
 // Error handlers
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 app.use((err, req, res, _next) => {

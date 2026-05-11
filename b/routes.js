@@ -1220,6 +1220,163 @@ export const completeServiceRequest = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+// ─── INTERVIEW ──────────────────────────────────────────────────────
+export const getInterviewStatus = async (req, res) => {
+  try {
+    const pool = getPool();
+    const applicationId = parseInt(req.params.applicationId);
+    
+    const result = await pool.request()
+      .input('aid', sql.Int, applicationId)
+      .query('SELECT * FROM Interviews WHERE ApplicationID = @aid');
+    
+    const completed = result.recordset.length > 0;
+    res.json({ success: true, completed });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getInterviewResult = async (req, res) => {
+  try {
+    const pool = getPool();
+    const applicationId = parseInt(req.params.applicationId);
+    
+    const result = await pool.request()
+      .input('aid', sql.Int, applicationId)
+      .query(`
+        SELECT i.*, u.Name as CandidateName, u.Email as CandidateEmail,
+               a.Status as ApplicationStatus
+        FROM Interviews i
+        JOIN Applications a ON i.ApplicationID = a.ApplicationID
+        JOIN Candidates c ON a.CandidateID = c.CandidateID
+        JOIN Users u ON c.CandidateID = u.UserID
+        WHERE i.ApplicationID = @aid
+      `);
+    
+    if (!result.recordset.length) {
+      return res.status(404).json({ success: false, message: 'Interview result not found' });
+    }
+    
+    const interview = result.recordset[0];
+    
+    // Parse the Notes field which contains Q&A and scoring data
+    let qa = [];
+    let summary = {};
+    
+    try {
+      const notesData = JSON.parse(interview.Notes || '{}');
+      qa = notesData.qa || [];
+      summary = notesData.summary || {};
+    } catch (e) {
+      console.error('Failed to parse interview notes:', e);
+    }
+    
+    res.json({
+      success: true,
+      result: {
+        summary: {
+          ...summary,
+          CandidateName: interview.CandidateName,
+          CandidateEmail: interview.CandidateEmail,
+          CompletedAt: interview.InterviewDate
+        },
+        qa: qa
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const saveInterviewResult = async (req, res) => {
+  try {
+    const pool = getPool();
+    const pyData = req.body;
+    
+    // Extract data from Python API response format
+    const application_id = pyData.applicationId;
+    const candidate_id = pyData.candidateId;
+    const qaResults = pyData.qaResults || [];
+    
+    // Build scores array from qaResults for compatibility
+    const scores = {
+      quality: qaResults.map(q => q.qualityScore || 0),
+      skill: qaResults.map(q => q.skillScore || 0),
+      personality: qaResults.map(q => q.personalityScore || 0),
+      feedback: qaResults.map(q => q.feedback || 'No feedback')
+    };
+    
+    // Build summary object
+    const summary = {
+      Hired: pyData.hired ? 1 : 0,
+      Confidence: pyData.confidence || 0,
+      AvgInterviewScore: pyData.avgInterviewScore || 0,
+      AvgSkillScore: pyData.avgSkillScore || 0,
+      AvgPersonalityScore: pyData.avgPersonalityScore || 0,
+      HiringProbability: pyData.hiringProbability || 0,
+      NotHiringProbability: pyData.notHiringProbability || 0,
+    };
+    
+    // Store Q&A and scores in Notes field as JSON
+    const notesData = {
+      qa: qaResults,
+      summary: summary,
+      profile: {
+        applicationId: application_id,
+        candidateId: candidate_id
+      }
+    };
+    
+    // Insert interview record
+    await pool.request()
+      .input('aid', sql.Int, application_id)
+      .input('date', sql.DateTime, new Date())
+      .input('type', sql.NVarChar(50), 'AI Interview')
+      .input('notes', sql.NVarChar(sql.MAX), JSON.stringify(notesData))
+      .query(`
+        INSERT INTO Interviews (ApplicationID, InterviewDate, InterviewType, Notes)
+        VALUES (@aid, @date, @type, @notes)
+      `);
+    
+    // Update application status to 'Interviewed'
+    await pool.request()
+      .input('aid', sql.Int, application_id)
+      .input('status', sql.NVarChar(50), 'Interviewed')
+      .query('UPDATE Applications SET Status = @status WHERE ApplicationID = @aid');
+    
+    // Get employer info for notification
+    const appInfo = await pool.request()
+      .input('aid', sql.Int, application_id)
+      .query(`
+        SELECT j.CompanyID, j.Title, u.Name as CandidateName
+        FROM Applications a
+        JOIN Jobs j ON a.JobID = j.JobID
+        JOIN Users u ON a.CandidateID = u.UserID
+        WHERE a.ApplicationID = @aid
+      `);
+    
+    let employerUserId = null;
+    let jobTitle = '';
+    
+    if (appInfo.recordset.length > 0) {
+      employerUserId = appInfo.recordset[0].CompanyID;
+      jobTitle = appInfo.recordset[0].Title;
+    }
+    
+    res.json({
+      success: true,
+      message: 'Interview result saved successfully',
+      employerUserId,
+      jobTitle
+    });
+  } catch (err) {
+    console.error('saveInterviewResult:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 // ════════════════════════════════════════
 //  NOTIFICATIONS
 // ════════════════════════════════════════

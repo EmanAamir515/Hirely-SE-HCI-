@@ -1,459 +1,348 @@
 import React, { useState, useEffect } from 'react';
-import { sendNotification } from './notifyHelperCandidate';
 
-// Props:
-//   user               – current logged-in user
-//   onViewJobApplicants(jobId) – called when "View Job" is clicked; parent switches to job-applicants tab
-const AllApplicants = ({ user, onViewJobApplicants, onViewInterview }) => {
-  const [applicants, setApplicants] = useState([]);
-  const [filteredApplicants, setFilteredApplicants] = useState([]);
+const MyApplications = ({ user, onStartInterview }) => {
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [filter, setFilter] = useState('All');
 
-  useEffect(() => {
-    fetchAllApplicants();
-  }, []);
+  useEffect(() => { fetchApplications(); }, []);
 
-  useEffect(() => {
-    filterApplicants();
-  }, [searchTerm, statusFilter, applicants]);
-
-  const fetchAllApplicants = async () => {
+  const fetchApplications = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/applicants/all', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch('http://localhost:5000/api/applications/my', {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await response.json();
-      if (data.success) {
-        setApplicants(data.applicants || []);
-        setFilteredApplicants(data.applicants || []);
-      }
-    } catch (error) {
-      console.error('Error fetching applicants:', error);
-    } finally {
-      setLoading(false);
-    }
+      const data = await res.json();
+      if (data.success) setApplications(data.applications || []);
+    } catch (_) {} finally { setLoading(false); }
   };
 
-  const filterApplicants = () => {
-    let filtered = [...applicants];
-
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(app =>
-        app.CandidateName?.toLowerCase().includes(term) ||
-        app.Email?.toLowerCase().includes(term) ||
-        app.JobTitle?.toLowerCase().includes(term)
-      );
-    }
-
-    if (statusFilter !== 'All') {
-      filtered = filtered.filter(app => app.Status === statusFilter);
-    }
-
-    setFilteredApplicants(filtered);
+  const statusConfig = {
+    Pending:     { color: '#92400E', bg: '#FEF3C7', border: '#FCD34D', icon: '⏳', label: 'Pending Review' },
+    Shortlisted: { color: '#1D4ED8', bg: '#DBEAFE', border: '#93C5FD', icon: '⭐', label: 'Shortlisted' },
+    Interview:   { color: '#5B21B6', bg: '#EDE9FE', border: '#C4B5FD', icon: '📞', label: 'Interview Scheduled' },
+    Interviewed: { color: '#065F46', bg: '#D1FAE5', border: '#6EE7B7', icon: '✅', label: 'Interview Done' },
+    Accepted:    { color: '#065F46', bg: '#D1FAE5', border: '#6EE7B7', icon: '🎉', label: 'Accepted' },
+    Rejected:    { color: '#991B1B', bg: '#FEE2E2', border: '#FCA5A5', icon: '❌', label: 'Rejected' },
   };
 
-  const updateStatus = async (applicationId, newStatus) => {
-    // Optimistically update UI
-    const applicant = applicants.find(a => a.ApplicationID === applicationId);
-    setApplicants(prev =>
-      prev.map(a => a.ApplicationID === applicationId ? { ...a, Status: newStatus } : a)
-    );
-    setFilteredApplicants(prev =>
-      prev.map(a => a.ApplicationID === applicationId ? { ...a, Status: newStatus } : a)
-    );
+  const filterOptions = ['All', 'Pending', 'Shortlisted', 'Interview', 'Interviewed', 'Accepted', 'Rejected'];
+  const filtered = filter === 'All' ? applications : applications.filter(a => a.Status === filter);
 
-    try {
-      const token = localStorage.getItem('token');
-      await fetch('http://localhost:5000/api/applications/status', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ applicationId, status: newStatus })
-      });
+  const statusCounts = filterOptions.slice(1).reduce((acc, s) => {
+    acc[s] = applications.filter(a => a.Status === s).length;
+    return acc;
+  }, {});
 
-      // ── Notify the candidate ─────────────────────────────────────────────
-      // The GET /api/applicants/all should include CandidateUserID or CandidateID
-      const candidateUserId = applicant?.CandidateUserID ?? applicant?.CandidateID;
-      if (candidateUserId) {
-        const jobTitle = applicant?.JobTitle || 'a position';
-        const candidateName = applicant?.CandidateName || 'there';
-        const statusMessages = {
-          Shortlisted: `🌟 Great news! Your application for "${jobTitle}" has been shortlisted.`,
-          Interview:   `🎙️ You've been selected for an AI Interview for "${jobTitle}". Log in to take it now!`,
-          Accepted:    `🎉 Congratulations! Your application for "${jobTitle}" has been accepted!`,
-          Rejected:    `Thank you for applying to "${jobTitle}". Unfortunately, you were not selected this time.`,
-          Pending:     `Your application for "${jobTitle}" status has been updated to Pending.`,
-        };
-        const msg = statusMessages[newStatus] || `Your application status changed to: ${newStatus}`;
-        await sendNotification(token, candidateUserId, msg);
-      }
-      // ────────────────────────────────────────────────────────────────────
-
-      fetchAllApplicants();
-    } catch (error) {
-      console.error('Error updating status:', error);
-      fetchAllApplicants(); // revert on error
-    }
+  const getDaysAgo = (d) => {
+    if (!d) return '';
+    const diff = Math.ceil(Math.abs(new Date() - new Date(d)) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return '1 day ago';
+    if (diff < 7)  return `${diff} days ago`;
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      'Pending':     { bg: '#FEF3C7', text: '#92400E' },
-      'Shortlisted': { bg: '#DBEAFE', text: '#1E40AF' },
-      'Interview':   { bg: '#EDE9FE', text: '#5B21B6' },
-      'Accepted':    { bg: '#D1FAE5', text: '#065F46' },
-      'Rejected':    { bg: '#FEE2E2', text: '#991B1B' }
-    };
-    return colors[status] || { bg: '#F3F4F6', text: '#374151' };
-  };
-
-  if (loading) return (
-    <div className="loading">
-      <div className="spinner"></div>
-      <p>Loading applicants…</p>
-    </div>
-  );
 
   return (
-    <div className="all-applicants-page">
-      <div className="page-header">
-        <h1>All Applicants</h1>
-        <p className="subtitle">View and manage every application across all your jobs</p>
+    <div className="ma-root">
+      {/* Header */}
+      <div className="ma-header">
+        <div>
+          <h2>My Applications</h2>
+          <p>Track all your job and internship applications</p>
+        </div>
+        <span className="ma-total-badge">{applications.length} Total</span>
       </div>
 
-      {/* Stats */}
-      <div className="stats-row">
-        {[
-          { val: applicants.length,                                      lbl: 'Total Applicants', bg: '#EEF2FF', color: '#667eea' },
-          { val: applicants.filter(a => a.Status === 'Pending').length,  lbl: 'Pending',          bg: '#FEF3C7', color: '#92400E' },
-          { val: applicants.filter(a => a.Status === 'Shortlisted').length, lbl: 'Shortlisted',   bg: '#DBEAFE', color: '#1E40AF' },
-          { val: applicants.filter(a => a.Status === 'Accepted').length, lbl: 'Accepted',         bg: '#D1FAE5', color: '#065F46' },
-        ].map((s, i) => (
-          <div key={i} className="stat-card" style={{ background: s.bg }}>
-            <span style={{ fontSize: '28px' }}></span>
-            <div>
-              <span className="stat-value" style={{ color: s.color }}>{s.val}</span>
-              <span className="stat-label">{s.lbl}</span>
-            </div>
+      {/* Interview Banner — show if any application is in Interview status */}
+      {applications.some(a => a.Status === 'Interview') && (
+        <div className="ma-interview-banner">
+          <span>🎙️</span>
+          <div>
+            <strong>You have been selected for an AI Interview!</strong>
+            <p>Scroll down to find the job and click "Take Interview" to begin.</p>
           </div>
+        </div>
+      )}
+
+      {/* Summary Cards */}
+      <div className="ma-summary-grid">
+        {filterOptions.slice(1).map(s => {
+          const cfg = statusConfig[s];
+          if (!cfg) return null;
+          return (
+            <div
+              key={s}
+              className={`ma-summary-card ${filter === s ? 'active' : ''}`}
+              onClick={() => setFilter(filter === s ? 'All' : s)}
+              style={{ borderColor: filter === s ? cfg.border : 'transparent' }}
+            >
+              <span className="ma-sum-icon">{cfg.icon}</span>
+              <div>
+                <div className="ma-sum-count" style={{ color: cfg.color }}>{statusCounts[s] || 0}</div>
+                <div className="ma-sum-label">{s}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Filter tabs */}
+      <div className="ma-filter-row">
+        {filterOptions.map(f => (
+          <button
+            key={f}
+            className={`ma-filter-tab ${filter === f ? 'active' : ''}`}
+            onClick={() => setFilter(f)}
+          >
+            {f}
+            {f !== 'All' && statusCounts[f] > 0 && (
+              <span className="ma-tab-count">{statusCounts[f]}</span>
+            )}
+          </button>
         ))}
       </div>
-     
 
-      {/* Search and Filter */}
-      <div className="controls">
-        <div className="search-box">
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <path d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
-              stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Search by name, email, or job title…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
+      {/* Applications List */}
+      {loading ? (
+        <div className="ma-loading">
+          {[1,2,3].map(i => <div key={i} className="ma-skeleton" />)}
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="filter-select"
-        >
-          <option value="All">All Status</option>
-          <option value="Pending">⏳ Pending</option>
-          <option value="Shortlisted"> Shortlisted</option>
-          <option value="Interview"> Interview</option>
-          <option value="Accepted"> Accepted</option>
-          <option value="Rejected">❌ Rejected</option>
-        </select>
-      </div>
+      ) : filtered.length === 0 ? (
+        <div className="ma-empty">
+          <span>📭</span>
+          <p>{filter === 'All' ? "You haven't applied to any jobs yet." : `No ${filter.toLowerCase()} applications.`}</p>
+        </div>
+      ) : (
+        <div className="ma-list">
+          {filtered.map(app => {
+            const cfg = statusConfig[app.Status] || statusConfig.Pending;
+            const canInterview = app.Status === 'Interview';
+            const doneInterview = app.Status === 'Interviewed';
 
-      {/* Table */}
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Applicant</th>
-              <th>Job Position</th>
-              <th>Applied Date</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredApplicants.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="empty-cell">
-                  <span>👥</span>
-                  <p>No applicants found</p>
-                  <small>Try adjusting your search or filter</small>
-                </td>
-              </tr>
-            ) : (
-              filteredApplicants.map(app => {
-                const statusStyle = getStatusColor(app.Status);
-                return (
-                  <tr key={app.ApplicationID}>
-                    <td>
-                      <div className="applicant-info">
-                        <div className="applicant-avatar">
-                          {app.CandidateName?.charAt(0).toUpperCase() || '?'}
+            return (
+              <div key={app.ApplicationID} className={`ma-card ${canInterview ? 'ma-card-highlight' : ''}`}>
+                {/* Left: Company Logo */}
+                <div className="ma-logo">
+                  {(app.CompanyName || 'C').charAt(0).toUpperCase()}
+                </div>
+
+                {/* Center: Job info */}
+                <div className="ma-info">
+                  <div className="ma-info-top">
+                    <h4 className="ma-job-title">{app.Title}</h4>
+                    <span
+                      className="ma-status-badge"
+                      style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}
+                    >
+                      {cfg.icon} {app.Status}
+                    </span>
+                  </div>
+                  <div className="ma-meta">
+                    <span>🏢 {app.CompanyName}</span>
+                    <span>📋 {app.JobType}</span>
+                    <span>🕒 Applied {getDaysAgo(app.AppliedDate)}</span>
+                  </div>
+                  {app.CoverNote && (
+                    <p className="ma-cover-note">"{app.CoverNote}"</p>
+                  )}
+
+                  {/* ── Interview Action ── */}
+                  {canInterview && (
+                    <button
+                      className="ma-interview-btn"
+                      onClick={() => onStartInterview && onStartInterview(app.ApplicationID, app.Title)}
+                    >
+                      🎙️ Take AI Interview
+                    </button>
+                  )}
+                  {doneInterview && (
+                    <div className="ma-interviewed-note">
+                      ✅ Interview completed — awaiting employer review
+                    </div>
+                  )}
+                </div>
+
+                {/* Status timeline */}
+                <div className="ma-timeline">
+                  {['Pending', 'Shortlisted', 'Interview'].map((step, idx) => {
+                    const steps = ['Pending', 'Shortlisted', 'Interview', 'Interviewed', 'Accepted'];
+                    const currentIdx = steps.indexOf(app.Status);
+                    const isRejected = app.Status === 'Rejected';
+                    const done = !isRejected && currentIdx >= idx;
+                    const current = !isRejected && currentIdx === idx;
+                    return (
+                      <React.Fragment key={step}>
+                        <div className={`ma-step ${done ? 'done' : ''} ${current ? 'current' : ''}`}>
+                          <div className="ma-step-dot">
+                            {done && !current && '✓'}
+                          </div>
+                          <span>{step}</span>
                         </div>
-                        <div>
-                          <strong>{app.CandidateName}</strong>
-                          <span className="email">{app.Email}</span>
-                          {app.Phone && <span className="phone">{app.Phone}</span>}
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="job-title-badge">{app.JobTitle}</span>
-                    </td>
-                    <td className="date-cell">
-                      {new Date(app.AppliedDate).toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'short', day: 'numeric'
-                      })}
-                    </td>
-                    <td>
-                      <select
-                        value={app.Status}
-                        onChange={(e) => updateStatus(app.ApplicationID, e.target.value)}
-                        className="status-select"
-                        style={{
-                          backgroundColor: statusStyle.bg,
-                          color: statusStyle.text,
-                          border: `1.5px solid ${statusStyle.text}30`
-                        }}
-                      >
-                        <option value="Pending">⏳ Pending</option>
-                        <option value="Shortlisted"> Shortlisted</option>
-                        <option value="Interview"> Interview</option>
-                        <option value="Accepted"> Accepted</option>
-                        <option value="Rejected">❌ Rejected</option>
-                      </select>
-                    </td>
-                    <td>
-                      <button
-                        className="view-btn"
-                        onClick={() => onViewJobApplicants && onViewJobApplicants(app.JobID)}
-                        title="See all applicants for this job"
-                      >
-                        👁 View Job
-                      </button>
-                      <button
-                        className="view-btn"
-                        style={{ marginLeft: 8, background: '#F0FDF4', color: '#166534' }}
-                        onClick={() => onViewInterview && onViewInterview(app.ApplicationID)}
-                        title="View interview result"
-                      >
-                        🎙️ Interview
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                        {idx < 2 && <div className={`ma-step-line ${done && currentIdx > idx ? 'done' : ''}`} />}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <style>{`
-        .all-applicants-page { max-width: 1200px; }
-
-        .page-header { margin-bottom: 24px; }
-        .page-header h1 { font-size: 28px; color: #111827; margin: 0 0 4px 0; }
-        .subtitle { color: #6B7280; margin: 0; font-size: 15px; }
-
-        /* Stats */
-        .stats-row {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          margin-bottom: 24px;
+        .ma-root { display: flex; flex-direction: column; gap: 16px; }
+        .ma-header {
+          display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        }
+        .ma-header h2 { font-size: 24px; font-weight: 700; color: #0F172A; margin: 0 0 4px; }
+        .ma-header p  { color: #64748B; margin: 0; font-size: 14px; }
+        .ma-total-badge {
+          padding: 6px 14px;
+          background: #EEF2FF; color: #4338CA;
+          border-radius: 20px; font-size: 13px; font-weight: 600;
         }
 
-        .stat-card {
-          background: white;
-          padding: 18px 20px;
-          border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-          display: flex;
-          align-items: center;
-          gap: 14px;
+        /* Interview Banner */
+        .ma-interview-banner {
+          display: flex; align-items: flex-start; gap: 14px;
+          background: linear-gradient(135deg, #EDE9FE, #F5F3FF);
+          border: 2px solid #C4B5FD; border-radius: 14px;
+          padding: 16px 20px;
+        }
+        .ma-interview-banner span { font-size: 28px; flex-shrink: 0; }
+        .ma-interview-banner strong { display: block; color: #5B21B6; font-size: 15px; margin-bottom: 3px; }
+        .ma-interview-banner p { margin: 0; font-size: 13px; color: #7C3AED; }
+
+        /* Summary */
+        .ma-summary-grid {
+          display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+        }
+        .ma-summary-card {
+          background: #fff; border-radius: 12px;
+          padding: 14px 12px; display: flex; align-items: center; gap: 10px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+          cursor: pointer; transition: all 0.15s;
+          border: 2px solid transparent;
+        }
+        .ma-summary-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .ma-summary-card.active { background: #F8FAFF; }
+        .ma-sum-icon  { font-size: 20px; }
+        .ma-sum-count { font-size: 20px; font-weight: 700; line-height: 1.2; }
+        .ma-sum-label { font-size: 11px; color: #64748B; }
+
+        /* Filters */
+        .ma-filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        .ma-filter-tab {
+          padding: 7px 14px; border-radius: 20px;
+          border: 1.5px solid #E2E8F0;
+          background: #F8FAFC; color: #475569;
+          font-size: 13px; font-weight: 500; cursor: pointer;
+          transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+        }
+        .ma-filter-tab:hover  { border-color: #667eea; color: #4338CA; }
+        .ma-filter-tab.active { background: #EEF2FF; color: #4338CA; border-color: #C7D2FE; font-weight: 600; }
+        .ma-tab-count {
+          background: #E0E7FF; color: #4338CA;
+          border-radius: 10px; padding: 1px 6px; font-size: 11px; font-weight: 700;
         }
 
-        .stat-card span:first-child { font-size: 28px; }
-        .stat-value { display: block; font-size: 22px; font-weight: 700; color: #111827; }
-        .stat-label { font-size: 12px; color: #6B7280; }
+        /* Loading / Empty */
+        .ma-loading { display: flex; flex-direction: column; gap: 12px; }
+        .ma-skeleton {
+          height: 110px; border-radius: 14px;
+          background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+          background-size: 200% 100%; animation: shimmer 1.4s infinite;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        .ma-empty { text-align: center; padding: 60px 0; color: #94A3B8; }
+        .ma-empty span { font-size: 48px; display: block; margin-bottom: 12px; }
+        .ma-empty p    { font-size: 15px; margin: 0; }
 
-        /* Controls */
-        .controls {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 16px;
+        /* Cards */
+        .ma-list { display: flex; flex-direction: column; gap: 12px; }
+        .ma-card {
+          background: #fff; border-radius: 14px;
+          padding: 20px 22px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+          display: flex; align-items: flex-start; gap: 16px;
+          transition: box-shadow 0.15s; border: 2px solid transparent;
+        }
+        .ma-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.09); }
+        .ma-card-highlight { border-color: #C4B5FD; background: #FDFBFF; }
+
+        .ma-logo {
+          width: 46px; height: 46px; border-radius: 12px;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          display: flex; align-items: center; justify-content: center;
+          color: #fff; font-weight: 700; font-size: 18px; flex-shrink: 0;
         }
 
-        .search-box {
-          flex: 1;
-          background: white;
-          border-radius: 10px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-          display: flex;
-          align-items: center;
-          padding: 0 14px;
-          gap: 10px;
+        .ma-info { flex: 1; min-width: 0; }
+        .ma-info-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+        .ma-job-title { font-size: 15px; font-weight: 600; color: #1E293B; margin: 0; }
+        .ma-status-badge {
+          padding: 4px 12px; border-radius: 20px;
+          font-size: 12px; font-weight: 600; white-space: nowrap;
+        }
+        .ma-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 6px; }
+        .ma-meta span { font-size: 12px; color: #64748B; }
+        .ma-cover-note {
+          font-size: 13px; color: #94A3B8; font-style: italic; margin: 0 0 10px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
-        .search-input {
-          flex: 1;
-          border: none;
-          padding: 13px 0;
-          font-size: 14px;
-          outline: none;
-          background: transparent;
-        }
-
-        .filter-select {
-          padding: 12px 16px;
-          border: 2px solid #E5E7EB;
-          border-radius: 10px;
-          font-size: 14px;
-          background: white;
-          cursor: pointer;
-          outline: none;
-        }
-
-        .filter-select:focus { border-color: #667EEA; }
-
-        /* Table */
-        .table-container {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-          overflow: hidden;
-        }
-
-        table { width: 100%; border-collapse: collapse; }
-
-        thead {
-          background: #F9FAFB;
-          border-bottom: 1px solid #E5E7EB;
-        }
-
-        th {
-          padding: 13px 20px;
-          text-align: left;
-          font-size: 11px;
-          font-weight: 600;
-          color: #6B7280;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        td {
-          padding: 14px 20px;
-          border-bottom: 1px solid #F3F4F6;
-          font-size: 14px;
-          vertical-align: middle;
-        }
-
-        tr:hover td { background: #F9FAFB; }
-        tr:last-child td { border-bottom: none; }
-
-        /* Applicant cell */
-        .applicant-info {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .applicant-avatar {
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #667eea);
-          color: white;
-          font-weight: 700;
-          font-size: 15px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .applicant-info strong { display: block; color: #111827; }
-        .applicant-info .email { display: block; color: #6B7280; font-size: 12px; }
-        .applicant-info .phone { display: block; color: #9CA3AF; font-size: 12px; }
-
-        .job-title-badge {
+        /* Interview button */
+        .ma-interview-btn {
+          margin-top: 10px;
+          padding: 10px 22px;
+          background: linear-gradient(135deg, #7C3AED, #5B21B6);
+          color: white; border: none; border-radius: 9px;
+          font-size: 14px; font-weight: 600; cursor: pointer;
+          transition: opacity .2s, transform .15s;
           display: inline-block;
-          padding: 4px 10px;
-          background: #EEF2FF;
-          color: #4338CA;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 500;
+        }
+        .ma-interview-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+        .ma-interviewed-note {
+          margin-top: 10px;
+          padding: 8px 14px;
+          background: #ECFDF5; color: #166534;
+          border-radius: 8px; font-size: 13px; font-weight: 500;
+          display: inline-block;
         }
 
-        .date-cell { color: #6B7280; font-size: 13px; }
-
-        .status-select {
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
+        /* Timeline */
+        .ma-timeline {
+          display: flex; align-items: center; gap: 4px; flex-shrink: 0;
         }
-
-        .view-btn {
-          padding: 7px 14px;
-          background: #EEF2FF;
-          color: #4338CA;
-          border: none;
-          border-radius: 7px;
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 500;
-          transition: background 0.2s;
+        .ma-step { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .ma-step-dot {
+          width: 22px; height: 22px; border-radius: 50%;
+          border: 2px solid #E2E8F0; background: #fff;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 10px; font-weight: 700; color: #fff;
+          transition: all 0.3s;
         }
-
-        .view-btn:hover { background: #DDD6FE; }
-
-        /* Empty */
-        .empty-cell {
-          text-align: center;
-          padding: 60px 20px !important;
-          color: #9CA3AF;
+        .ma-step.done .ma-step-dot { background: #667eea; border-color: #667eea; color: #fff; }
+        .ma-step.current .ma-step-dot { background: #fff; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
+        .ma-step span { font-size: 9px; color: #94A3B8; white-space: nowrap; }
+        .ma-step.done span { color: #667eea; font-weight: 600; }
+        .ma-step-line {
+          width: 24px; height: 2px; background: #E2E8F0; margin-bottom: 14px; transition: background 0.3s;
         }
-        .empty-cell span { font-size: 48px; display: block; margin-bottom: 12px; }
-        .empty-cell p { font-size: 16px; margin: 0 0 4px 0; font-weight: 500; }
-        .empty-cell small { font-size: 13px; }
+        .ma-step-line.done { background: #667eea; }
 
-        /* Loading */
-        .loading { text-align: center; padding: 80px; color: #666; }
-        .spinner {
-          width: 40px; height: 40px;
-          border: 3px solid #F3F4F6;
-          border-top-color: #667EEA;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-          margin: 0 auto 16px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        @media (max-width: 900px) {
-          .stats-row { grid-template-columns: repeat(2, 1fr); }
+        @media (max-width: 900px) { .ma-summary-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 640px) {
+          .ma-summary-grid { grid-template-columns: repeat(2, 1fr); }
+          .ma-timeline { display: none; }
+          .ma-card { flex-wrap: wrap; }
         }
       `}</style>
     </div>
   );
 };
 
-export default AllApplicants;
+export default MyApplications;

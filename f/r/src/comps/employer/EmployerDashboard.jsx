@@ -8,6 +8,7 @@ import AllApplicants     from './AllApplicants';
 import ManageServices    from './ManageServices';
 import ManageProducts    from './ManageProducts';
 import ServiceRequests   from './ServiceRequests';
+import InterviewResult from './InterviewResult';
 
 const API = 'http://localhost:5000';
 
@@ -21,6 +22,9 @@ const EmployerDashboard = ({ user, onLogout }) => {
   const [notifications, setNotifications] = useState([]);
   const [showNotif,     setShowNotif]     = useState(false);
   const [unread,        setUnread]        = useState(0);
+
+  const [selectedInterviewId, setSelectedInterviewId] = useState(null);
+
 
   const fetchNotifications = async () => {
     try {
@@ -48,6 +52,11 @@ const EmployerDashboard = ({ user, onLogout }) => {
       setUnread(0);
       setNotifications([]); // remove from list once seen
     } catch (_) {}
+  };
+
+  const handleViewInterview = (applicationId) => {
+    setSelectedInterviewId(applicationId);
+    setActiveTab('interview-result');
   };
 
   const fetchCompanyProfile = async () => {
@@ -248,14 +257,27 @@ const EmployerDashboard = ({ user, onLogout }) => {
             />
           )}
 
-          {activeTab === 'all-applicants' && (
-            <AllApplicants user={user} onViewJobApplicants={handleViewJobApplicants} />
-          )}
+  
 
           {activeTab === 'services'  && <ManageServices user={user} />}
           {activeTab === 'products'  && <ManageProducts user={user} />}
           {activeTab === 'service-requests' && <ServiceRequests user={user} />}
 
+          {activeTab === 'interview-result' && (
+            <InterviewResult 
+              applicationId={selectedInterviewId}
+              onBack={() => setActiveTab('all-applicants')}
+            />
+          )}
+
+          // Update AllApplicants call to include onViewInterview
+          {activeTab === 'all-applicants' && (
+            <AllApplicants 
+              user={user} 
+              onViewJobApplicants={handleViewJobApplicants}
+              onViewInterview={handleViewInterview}  // ADD THIS
+            />
+          )}
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import FindJobs           from './FindJobs';
 import EligibilityCheck   from './EligibilityCheck';
 import MyApplications     from './MyApplications';
 import ServiceMarketplace from './ServiceMarketplace';
+import InterviewPage from './InterviewPage';
 
 const navItems = [
   { id: 'overview',     label: 'Dashboard'          },
@@ -13,6 +14,7 @@ const navItems = [
   { id: 'eligibility',  label: 'Eligibility Check'  },
   { id: 'applications', label: 'My Applications'    },
   { id: 'marketplace',  label: 'Service Marketplace'},
+  { id: 'interview',    label: 'AI Interview'       }
 ];
 
 const CandidateDashboard = ({ user, onLogout }) => {
@@ -20,6 +22,8 @@ const CandidateDashboard = ({ user, onLogout }) => {
   const [notifications,  setNotifications]  = useState([]);
   const [showNotif,      setShowNotif]      = useState(false);
   const [unread,         setUnread]         = useState(0);
+  const [interviewAppId, setInterviewAppId] = useState(null);
+  const [interviewJobTitle, setInterviewJobTitle] = useState('');
 
   useEffect(() => { fetchNotifications(); }, []);
 
@@ -50,17 +54,25 @@ const CandidateDashboard = ({ user, onLogout }) => {
     } catch (_) {}
   };
 
+  const handleStartInterview = (applicationId, jobTitle) => {
+    setInterviewAppId(applicationId);
+    setInterviewJobTitle(jobTitle);
+    setActiveTab('interview');
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':     return <CandidateOverview  user={user} onNavigate={setActiveTab} />;
       case 'profile':      return <CandidateProfile   user={user} />;
       case 'findJobs':     return <FindJobs           user={user} />;
       case 'eligibility':  return <EligibilityCheck   user={user} />;
-      case 'applications': return <MyApplications     user={user} />;
+      case 'applications': return <MyApplications     user={user} onStartInterview={handleStartInterview} />; // UPDATED: add onStartInterview
       case 'marketplace':  return <ServiceMarketplace user={user} />;
+      case 'interview':    return <InterviewPage      user={user} applicationId={interviewAppId} />; // ADD THIS
       default:             return <CandidateOverview  user={user} onNavigate={setActiveTab} />;
     }
   };
+
 
   const pageTitle = navItems.find(n => n.id === activeTab)?.label || 'Dashboard';
 
